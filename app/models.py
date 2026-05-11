@@ -27,6 +27,7 @@ class SyncTracker(models.Model):
     sync_status = models.CharField(max_length=20) 
     synced_at = models.DateTimeField(auto_now_add=True)
     error_message = models.TextField(null=True,blank=True)
+    
 # =========================
 # USERS
 # =========================
@@ -76,7 +77,7 @@ class Parent(models.Model):
     name = models.CharField(max_length=255)
     unique_user_id = models.CharField(max_length=100, null=True, blank=True)
     education = models.CharField(max_length=255)
-    income = models.DecimalField(max_digits=10, decimal_places=2)
+    income = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     phone = models.CharField(max_length=20)
     email = models.EmailField()
 

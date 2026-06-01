@@ -1,0 +1,342 @@
+
+{% extends 'base/base.html' %}
+
+{% load static %}
+
+
+<!-- ======================================================
+TITLE
+====================================================== -->
+
+{% block title %}
+
+    Horizons | Sign In
+
+{% endblock %}
+
+
+<!-- ======================================================
+CONTENT
+====================================================== -->
+
+{% block content %}
+
+<div class="stars" id="stars"></div>
+
+<div class="orb" id="orb"></div>
+
+<div class="container-fluid">
+
+    <div class="row justify-content-center align-items-center min-vh-100">
+
+        <div class="col-lg-4 col-md-6 col-12">
+
+            <div class="card glass-card login-card">
+
+                <!-- BRAND -->
+
+                <div class="brand">
+
+                    <div
+                        class="brand-mark"
+                        id="brandMark"
+                    >
+
+                        🎓
+
+                    </div>
+
+                    <div>
+
+                        <div class="brand-name brand-font">
+
+                            Horizons
+
+                        </div>
+
+                        <div class="brand-sub">
+
+                            Every learner's journey clearly mapped.
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- CARD BODY -->
+
+                <div class="card-body-custom p-4">
+
+                    <!-- ERROR -->
+
+                    {% if error %}
+
+                    <div class="error-box mb-3">
+
+                        {{ error }}
+
+                    </div>
+
+                    {% endif %}
+
+                    <!-- ROLE BUTTONS -->
+
+                    <div class="row g-3 mb-4">
+
+                        <!-- PARENT -->
+
+                        <div class="col-6 col-md-3">
+
+                            <div
+                                class="role-btn {% if tab == 'Parent' %}active-parent{% endif %}"
+                                onclick="switchTab('Parent')"
+                            >
+
+                                <div class="role-icon">
+
+                                    👨‍👩‍👧
+
+                                </div>
+
+                                <div class="role-name">
+
+                                    Parent
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- TEACHER -->
+
+                        <div class="col-6 col-md-3">
+
+                            <div
+                                class="role-btn {% if tab == 'Teacher' %}active-teacher{% endif %}"
+                                onclick="switchTab('Teacher')"
+                            >
+
+                                <div class="role-icon">
+
+                                    📋
+
+                                </div>
+
+                                <div class="role-name">
+
+                                    Teacher
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- PRINCIPAL -->
+
+                        <div class="col-6 col-md-3">
+
+                            <div
+                                class="role-btn {% if tab == 'Principal' %}active-principal{% endif %}"
+                                onclick="switchTab('Principal')"
+                            >
+
+                                <div class="role-icon">
+
+                                    🏛️
+
+                                </div>
+
+                                <div class="role-name">
+
+                                    Principal
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- ADMIN -->
+
+                        <div class="col-6 col-md-3">
+
+                            <div
+                                class="role-btn {% if tab == 'Admin' %}active-admin{% endif %}"
+                                onclick="switchTab('Admin')"
+                            >
+
+                                <div class="role-icon">
+
+                                    ⚙️
+
+                                </div>
+
+                                <div class="role-name">
+
+                                    Admin
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- DIVIDER -->
+
+                    <div class="divider">
+
+                        <div class="divider-line"></div>
+
+                        <div class="divider-label">
+
+                            Sign In
+
+                        </div>
+
+                        <div class="divider-line"></div>
+
+                    </div>
+
+                    <!-- LOGIN FORM -->
+
+                    <form
+                        method="POST"
+                        action="{% url 'login' %}"
+                    >
+
+                        {% csrf_token %}
+
+                        <input
+                            type="hidden"
+                            name="tab"
+                            value="{{ tab }}"
+                        >
+
+                        <input
+                            type="hidden"
+                            name="action"
+                            value="login"
+                        >
+
+                        <!-- USER ID -->
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+
+                                User ID
+
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                name="user_id"
+                                placeholder="Enter User ID"
+                                required
+                            >
+
+                        </div>
+
+                        <!-- PASSWORD -->
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+
+                                Password
+
+                            </label>
+
+                            <input
+                                type="password"
+                                class="form-control"
+                                name="password"
+                                placeholder="Enter Password"
+                                required
+                            >
+
+                        </div>
+
+                        <!-- ACADEMIC YEAR -->
+
+                        <div class="mb-4">
+
+                            <label class="form-label">
+
+                                Academic Year
+
+                            </label>
+
+                            <select
+                                class="form-control"
+                                name="academic_year_id"
+                                required
+                            >
+
+                                {% for year in academic_years %}
+
+                                <option
+                                    value="{{ year.id }}"
+                                    {% if year.is_active %}selected{% endif %}
+                                >
+
+                                    {{ year.name }}
+
+                                    {% if year.is_active %}
+
+                                        (Current)
+
+                                    {% endif %}
+
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+                        <!-- BUTTON -->
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary-custom w-100"
+                        >
+
+                            Login →
+
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+<!-- ======================================================
+PAGE JS
+====================================================== -->
+
+{% block js %}
+
+<script
+    src="{% static 'js/accounts/login.js' %}">
+</script>
+
+{% endblock %}
+

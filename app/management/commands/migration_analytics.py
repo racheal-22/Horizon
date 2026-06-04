@@ -26,11 +26,13 @@ class Command(BaseCommand):
 
         StudentYearSummary.objects.all().delete()
 
-        enrollments = StudentEnrollment.objects.select_related(
-            "academic_year"
-        )
+        summaries_to_create = []
 
-        rank_counter = 1
+        enrollments = StudentEnrollment.objects.select_related(
+            "student",
+            "academic_year",
+            "school"
+        )
 
         for enrollment in enrollments:
 
@@ -51,23 +53,35 @@ class Command(BaseCommand):
                 academic_year=enrollment.academic_year
             ).first()
 
-            StudentYearSummary.objects.create(
+            summaries_to_create.append(
 
-                student_enrollment=enrollment,
+                StudentYearSummary(
+                    school=enrollment.school,
 
-                avg_marks=round(avg_marks, 2),
+                    student_enrollment=enrollment,
 
-                attendance_percentage=round(
-                    attendance,
-                    2
-                ),
+                    avg_marks=round(
+                        avg_marks,
+                        2
+                    ),
 
-                rank=rank_counter,
+                    attendance_percentage=round(
+                        attendance,
+                        2
+                    ),
 
-                achievement_id=achievement.id if achievement else 0
+                    achievement_id=
+                    achievement.id if achievement else 0
+
+                )
             )
 
-            rank_counter += 1
+        if summaries_to_create:
+
+            StudentYearSummary.objects.bulk_create(
+                summaries_to_create,
+                batch_size=1000
+            )
 
         self.stdout.write(
             self.style.SUCCESS(

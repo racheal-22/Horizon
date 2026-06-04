@@ -561,6 +561,12 @@ class StudentAttendance(models.Model):
         on_delete=models.CASCADE
     )
 
+    source_student_attendance_id = models.BigIntegerField(
+        null=True,
+        blank=True,
+        db_index=True
+    )
+
     student_enrollment=models.ForeignKey(
         StudentEnrollment,
         on_delete=models.CASCADE
@@ -608,6 +614,12 @@ class TeacherAttendance(models.Model):
     punch_time=models.DateTimeField(
         null=True,
         blank=True
+    )
+
+    source_teacher_attendance_id = models.BigIntegerField(
+        null=True,
+        blank=True,
+        db_index=True
     )
 
     is_present=models.BooleanField(
@@ -820,7 +832,7 @@ class StudentYearSummary(models.Model):
     student_enrollment = models.ForeignKey(StudentEnrollment, on_delete=models.CASCADE)
     avg_marks = models.DecimalField(max_digits=5, decimal_places=2)
     attendance_percentage = models.DecimalField(max_digits=5, decimal_places=2)
-    rank = models.IntegerField()
+    rank = models.IntegerField(null=True, blank=True)
     achievement_id = models.IntegerField()
 
     class Meta:

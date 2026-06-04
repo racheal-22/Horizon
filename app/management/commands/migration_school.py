@@ -920,7 +920,7 @@ class Command(BaseCommand):
                 div.source_section_id: div
 
                 for div in Division.objects.filter(
-                    class_ref__school=school_obj
+                    school=school_obj
                 )
             }
 
@@ -936,16 +936,12 @@ class Command(BaseCommand):
                         row["academic_yr"]
                     )
 
-                    # SAFETY CHECK
-
                     if not class_obj or not academic_year_obj:
                         continue
 
                     existing_division = existing_divisions.get(
                         row["section_id"]
                     )
-
-                    # UPDATE
 
                     if existing_division:
 
@@ -959,17 +955,21 @@ class Command(BaseCommand):
                             academic_year_obj
                         )
 
+                        existing_division.school = (
+                            school_obj
+                        )
+
                         divisions_to_update.append(
                             existing_division
                         )
 
                         action = "UPDATE"
 
-                    # INSERT
-
                     else:
 
                         division_obj = Division(
+
+                            school=school_obj,
 
                             source_section_id=row[
                                 "section_id"
@@ -1015,16 +1015,12 @@ class Command(BaseCommand):
                         error_message=str(e)
                     )
 
-            # BULK CREATE
-
             if divisions_to_create:
 
                 Division.objects.bulk_create(
                     divisions_to_create,
                     batch_size=self.BATCH_SIZE
                 )
-
-            # BULK UPDATE
 
             if divisions_to_update:
 
@@ -1033,7 +1029,8 @@ class Command(BaseCommand):
                     [
                         "name",
                         "class_ref",
-                        "academic_year"
+                        "academic_year",
+                        "school"
                     ],
                     batch_size=self.BATCH_SIZE
                 )
@@ -1043,7 +1040,6 @@ class Command(BaseCommand):
                 "Divisions sync completed"
             )
         )
-
 
     # ==========================================
     # DEPARTMENT SPECIAL ROLES
@@ -1332,15 +1328,13 @@ class Command(BaseCommand):
     # ========================================== #
     # STUDENT ENROLLMENTS #
     # ========================================== #
-    # START ENROLLMENT SYNC
     def sync_student_enrollments(self, school_obj):
+
         self.stdout.write(
             self.style.WARNING(
                 "Starting student enrollments sync..."
             )
         )
-
-        # FETCH ENROLLMENT DATA
 
         query = """
             SELECT
@@ -1352,28 +1346,28 @@ class Command(BaseCommand):
             FROM student
         """
 
-        # STUDENT MAP
-
         student_map = {
+
             student.unique_user_id: student
+
             for student in Student.objects.filter(
                 school=school_obj
             )
         }
 
-        # DIVISION MAP
-
         division_map = {
+
             division.source_section_id: division
+
             for division in Division.objects.filter(
-                class_ref__school=school_obj
+                school=school_obj
             )
         }
 
-        # ACADEMIC YEAR MAP
-
         academic_year_map = {
+
             year.name: year
+
             for year in AcademicYear.objects.filter(
                 school=school_obj
             )
@@ -1381,16 +1375,12 @@ class Command(BaseCommand):
 
         for chunk in self.fetch_in_chunks(query):
 
-            # PROCESS ENROLLMENT CHUNK
-
             self.stdout.write(
                 f"Processing {len(chunk)} enrollments..."
             )
 
             enrollments_to_create = []
             enrollments_to_update = []
-
-            # EXISTING ENROLLMENTS
 
             existing_enrollments = {
 
@@ -1400,15 +1390,13 @@ class Command(BaseCommand):
                 ): enrollment
 
                 for enrollment in StudentEnrollment.objects.filter(
-                    student__school=school_obj
+                    school=school_obj
                 )
             }
 
             for row in chunk:
 
                 try:
-
-                    # GET STUDENT
 
                     student_obj = student_map.get(
                         str(row["student_id"])
@@ -1417,16 +1405,12 @@ class Command(BaseCommand):
                     if not student_obj:
                         continue
 
-                    # GET DIVISION
-
                     division_obj = division_map.get(
                         row["section_id"]
                     )
 
                     if not division_obj:
                         continue
-
-                    # GET ACADEMIC YEAR
 
                     academic_year_obj = academic_year_map.get(
                         row["academic_yr"]
@@ -1440,8 +1424,6 @@ class Command(BaseCommand):
                         academic_year_obj.id
                     )
 
-                    # CHECK ENROLLMENT EXISTS
-
                     existing_enrollment = (
                         existing_enrollments.get(
                             enrollment_key
@@ -1453,8 +1435,6 @@ class Command(BaseCommand):
                         if row["isActive"] == "Y"
                         else "INACTIVE"
                     )
-
-                    # UPDATE
 
                     if existing_enrollment:
 
@@ -1470,24 +1450,33 @@ class Command(BaseCommand):
                             status
                         )
 
+                        existing_enrollment.school = (
+                            school_obj
+                        )
+
                         enrollments_to_update.append(
                             existing_enrollment
                         )
 
                         action = "UPDATE"
 
-                    # INSERT
-
                     else:
 
                         enrollment_obj = (
                             StudentEnrollment(
+
+                                school=school_obj,
+
                                 student=student_obj,
+
                                 division=division_obj,
+
                                 academic_year=academic_year_obj,
+
                                 roll_number=str(
                                     row["roll_no"] or ""
                                 ),
+
                                 status=status
                             )
                         )
@@ -1497,8 +1486,6 @@ class Command(BaseCommand):
                         )
 
                         action = "INSERT"
-
-                    # LOG SUCCESS
 
                     self.log_sync(
                         school=school_obj,
@@ -1518,8 +1505,6 @@ class Command(BaseCommand):
                         )
                     )
 
-                    # LOG FAILURE
-
                     self.log_sync(
                         school=school_obj,
                         source_table="student",
@@ -1532,8 +1517,6 @@ class Command(BaseCommand):
                         status="FAILED",
                         error_message=str(e)
                     )
-
-            # BULK CREATE
 
             if enrollments_to_create:
 
@@ -1548,8 +1531,6 @@ class Command(BaseCommand):
                     )
                 )
 
-            # BULK UPDATE
-
             if enrollments_to_update:
 
                 StudentEnrollment.objects.bulk_update(
@@ -1557,7 +1538,8 @@ class Command(BaseCommand):
                     [
                         "division",
                         "roll_number",
-                        "status"
+                        "status",
+                        "school"
                     ],
                     batch_size=self.BATCH_SIZE
                 )
@@ -1574,8 +1556,6 @@ class Command(BaseCommand):
             )
         )
 
-
-
     def sync_teachers(self,school_obj):
 
         query="""
@@ -1588,7 +1568,7 @@ class Command(BaseCommand):
 
         class_map={c.source_class_id:c for c in Class.objects.filter(school=school_obj)}
 
-        division_map={d.source_section_id:d for d in Division.objects.filter(class_ref__school=school_obj)}
+        division_map={d.source_section_id:d for d in Division.objects.filter(school=school_obj)}
 
         existing_teachers={t.teacher_id:t for t in Teacher.objects.filter(school=school_obj)}
 
@@ -1683,13 +1663,18 @@ class Command(BaseCommand):
     def sync_subject_master(self,school_obj):
 
         query="""
-            SELECT sm_id,name,subject_type
+            SELECT
+            sm_id,
+            name,
+            subject_type
             FROM subject_master
         """
 
         existing_subjects={
             s.source_sm_id:s
-            for s in SubjectMaster.objects.all()
+            for s in SubjectMaster.objects.filter(
+                school=school_obj
+            )
         }
 
         for chunk in self.fetch_in_chunks(query):
@@ -1705,8 +1690,13 @@ class Command(BaseCommand):
 
                 if existing_subject:
 
+                    existing_subject.school=school_obj
+
                     existing_subject.name=row["name"]
-                    existing_subject.subject_type=row["subject_type"]
+
+                    existing_subject.subject_type=row[
+                        "subject_type"
+                    ]
 
                     subjects_to_update.append(
                         existing_subject
@@ -1714,16 +1704,27 @@ class Command(BaseCommand):
 
                 else:
 
-                    subjects_to_create.append(
+                    subject_obj=SubjectMaster(
 
-                        SubjectMaster(
+                        school=school_obj,
 
-                            source_sm_id=row["sm_id"],
-                            name=row["name"],
-                            subject_type=row["subject_type"]
+                        source_sm_id=row["sm_id"],
 
-                        )
+                        name=row["name"],
+
+                        subject_type=row[
+                            "subject_type"
+                        ]
+
                     )
+
+                    subjects_to_create.append(
+                        subject_obj
+                    )
+
+                    existing_subjects[
+                        row["sm_id"]
+                    ] = True
 
             if subjects_to_create:
 
@@ -1736,22 +1737,34 @@ class Command(BaseCommand):
 
                 SubjectMaster.objects.bulk_update(
                     subjects_to_update,
-                    ["name","subject_type"],
+                    [
+                        
+                        "name",
+                        "subject_type"
+                    ],
                     batch_size=self.BATCH_SIZE
                 )
 
     def sync_subjects(self,school_obj):
 
         query="""
-            SELECT subject_id,sm_id,class_id,
-            section_id,teacher_id,academic_yr,
-            created_at,updated_at
+            SELECT
+            subject_id,
+            sm_id,
+            class_id,
+            section_id,
+            teacher_id,
+            academic_yr,
+            created_at,
+            updated_at
             FROM subject
         """
 
         subject_master_map={
             s.source_sm_id:s
-            for s in SubjectMaster.objects.all()
+            for s in SubjectMaster.objects.filter(
+                school=school_obj
+            )
         }
 
         class_map={
@@ -1764,7 +1777,7 @@ class Command(BaseCommand):
         division_map={
             d.source_section_id:d
             for d in Division.objects.filter(
-                class_ref__school=school_obj
+                school=school_obj
             )
         }
 
@@ -1796,15 +1809,25 @@ class Command(BaseCommand):
 
             for row in chunk:
 
-                subject_master_obj=subject_master_map.get(row["sm_id"])
+                subject_master_obj=subject_master_map.get(
+                    row["sm_id"]
+                )
 
-                class_obj=class_map.get(row["class_id"])
+                class_obj=class_map.get(
+                    row["class_id"]
+                )
 
-                division_obj=division_map.get(row["section_id"])
+                division_obj=division_map.get(
+                    row["section_id"]
+                )
 
-                teacher_obj=teacher_map.get(row["teacher_id"])
+                teacher_obj=teacher_map.get(
+                    row["teacher_id"]
+                )
 
-                academic_year_obj=academic_year_map.get(row["academic_yr"])
+                academic_year_obj=academic_year_map.get(
+                    row["academic_yr"]
+                )
 
                 existing_subject=existing_subjects.get(
                     row["subject_id"]
@@ -1812,13 +1835,25 @@ class Command(BaseCommand):
 
                 if existing_subject:
 
+                    existing_subject.school=school_obj
+
                     existing_subject.subject_master=subject_master_obj
+
                     existing_subject.class_ref=class_obj
+
                     existing_subject.division=division_obj
+
                     existing_subject.teacher=teacher_obj
+
                     existing_subject.academic_year=academic_year_obj
-                    existing_subject.created_at=row["created_at"]
-                    existing_subject.updated_at=row["updated_at"]
+
+                    existing_subject.created_at=row[
+                        "created_at"
+                    ]
+
+                    existing_subject.updated_at=row[
+                        "updated_at"
+                    ]
 
                     subjects_to_update.append(
                         existing_subject
@@ -1826,22 +1861,41 @@ class Command(BaseCommand):
 
                 else:
 
-                    subjects_to_create.append(
+                    subject_obj=Subject(
 
-                        Subject(
+                        school=school_obj,
 
-                            school=school_obj,
-                            source_subject_id=row["subject_id"],
-                            subject_master=subject_master_obj,
-                            class_ref=class_obj,
-                            division=division_obj,
-                            teacher=teacher_obj,
-                            academic_year=academic_year_obj,
-                            created_at=row["created_at"],
-                            updated_at=row["updated_at"]
+                        source_subject_id=row[
+                            "subject_id"
+                        ],
 
-                        )
+                        subject_master=subject_master_obj,
+
+                        class_ref=class_obj,
+
+                        division=division_obj,
+
+                        teacher=teacher_obj,
+
+                        academic_year=academic_year_obj,
+
+                        created_at=row[
+                            "created_at"
+                        ],
+
+                        updated_at=row[
+                            "updated_at"
+                        ]
+
                     )
+
+                    subjects_to_create.append(
+                        subject_obj
+                    )
+
+                    existing_subjects[
+                        row["subject_id"]
+                    ] = True
 
             if subjects_to_create:
 
@@ -1855,6 +1909,7 @@ class Command(BaseCommand):
                 Subject.objects.bulk_update(
                     subjects_to_update,
                     [
+                        
                         "subject_master",
                         "class_ref",
                         "division",
@@ -1870,14 +1925,20 @@ class Command(BaseCommand):
     def sync_subject_report_card_master(self,school_obj):
 
         query="""
-            SELECT sub_rc_master_id,name,
-            sequence,created_at,updated_at
+            SELECT
+            sub_rc_master_id,
+            name,
+            sequence,
+            created_at,
+            updated_at
             FROM subjects_on_report_card_master
         """
 
         existing_report_cards={
             s.source_sub_rc_master_id:s
-            for s in SubjectReportCardMaster.objects.all()
+            for s in SubjectReportCardMaster.objects.filter(
+                school=school_obj
+            )
         }
 
         for chunk in self.fetch_in_chunks(query):
@@ -1894,9 +1955,16 @@ class Command(BaseCommand):
                 if existing_report_card:
 
                     existing_report_card.name=row["name"]
+
                     existing_report_card.sequence=row["sequence"]
-                    existing_report_card.created_at=row["created_at"]
-                    existing_report_card.updated_at=row["updated_at"]
+
+                    existing_report_card.created_at=row[
+                        "created_at"
+                    ]
+
+                    existing_report_card.updated_at=row[
+                        "updated_at"
+                    ]
 
                     report_cards_to_update.append(
                         existing_report_card
@@ -1904,18 +1972,37 @@ class Command(BaseCommand):
 
                 else:
 
-                    report_cards_to_create.append(
+                    report_card_obj=SubjectReportCardMaster(
 
-                        SubjectReportCardMaster(
+                        school=school_obj,
 
-                            source_sub_rc_master_id=row["sub_rc_master_id"],
-                            name=row["name"],
-                            sequence=row["sequence"],
-                            created_at=row["created_at"],
-                            updated_at=row["updated_at"]
+                        source_sub_rc_master_id=row[
+                            "sub_rc_master_id"
+                        ],
 
-                        )
+                        name=row["name"],
+
+                        sequence=row["sequence"],
+
+                        created_at=row[
+                            "created_at"
+                        ],
+
+                        updated_at=row[
+                            "updated_at"
+                        ]
+
                     )
+
+                    report_cards_to_create.append(
+                        report_card_obj
+                    )
+
+                    # Prevent duplicate inserts in same run
+
+                    existing_report_cards[
+                        row["sub_rc_master_id"]
+                    ] = True
 
             if report_cards_to_create:
 
@@ -1936,20 +2023,27 @@ class Command(BaseCommand):
                     ],
                     batch_size=self.BATCH_SIZE
                 )
+    
 
     def sync_subject_report_cards(self,school_obj):
 
         query="""
-            SELECT sub_reportcard_id,
-            sub_rc_master_id,class_id,
-            subject_type,academic_yr,
-            created_at,updated_at
+            SELECT
+            sub_reportcard_id,
+            sub_rc_master_id,
+            class_id,
+            subject_type,
+            academic_yr,
+            created_at,
+            updated_at
             FROM subjects_on_report_card
         """
 
         report_card_master_map={
             s.source_sub_rc_master_id:s
-            for s in SubjectReportCardMaster.objects.all()
+            for s in SubjectReportCardMaster.objects.filter(
+                school=school_obj
+            )
         }
 
         class_map={
@@ -1968,7 +2062,9 @@ class Command(BaseCommand):
 
         existing_report_cards={
             s.source_sub_reportcard_id:s
-            for s in SubjectReportCard.objects.all()
+            for s in SubjectReportCard.objects.filter(
+                school=school_obj
+            )
         }
 
         for chunk in self.fetch_in_chunks(query):
@@ -1990,18 +2086,38 @@ class Command(BaseCommand):
                     row["academic_yr"]
                 )
 
+                if not report_card_master_obj \
+                or not class_obj \
+                or not academic_year_obj:
+                    continue
+
                 existing_report_card=existing_report_cards.get(
                     row["sub_reportcard_id"]
                 )
 
                 if existing_report_card:
 
-                    existing_report_card.report_card_master=report_card_master_obj
+                    existing_report_card.report_card_master=(
+                        report_card_master_obj
+                    )
+
                     existing_report_card.class_ref=class_obj
-                    existing_report_card.subject_type=row["subject_type"]
-                    existing_report_card.academic_year=academic_year_obj
-                    existing_report_card.created_at=row["created_at"]
-                    existing_report_card.updated_at=row["updated_at"]
+
+                    existing_report_card.subject_type=row[
+                        "subject_type"
+                    ]
+
+                    existing_report_card.academic_year=(
+                        academic_year_obj
+                    )
+
+                    existing_report_card.created_at=row[
+                        "created_at"
+                    ]
+
+                    existing_report_card.updated_at=row[
+                        "updated_at"
+                    ]
 
                     report_cards_to_update.append(
                         existing_report_card
@@ -2009,20 +2125,43 @@ class Command(BaseCommand):
 
                 else:
 
-                    report_cards_to_create.append(
+                    report_card_obj=SubjectReportCard(
 
-                        SubjectReportCard(
+                        school=school_obj,
 
-                            source_sub_reportcard_id=row["sub_reportcard_id"],
-                            report_card_master=report_card_master_obj,
-                            class_ref=class_obj,
-                            subject_type=row["subject_type"],
-                            academic_year=academic_year_obj,
-                            created_at=row["created_at"],
-                            updated_at=row["updated_at"]
+                        source_sub_reportcard_id=row[
+                            "sub_reportcard_id"
+                        ],
 
-                        )
+                        report_card_master=
+                        report_card_master_obj,
+
+                        class_ref=class_obj,
+
+                        subject_type=row[
+                            "subject_type"
+                        ],
+
+                        academic_year=
+                        academic_year_obj,
+
+                        created_at=row[
+                            "created_at"
+                        ],
+
+                        updated_at=row[
+                            "updated_at"
+                        ]
+
                     )
+
+                    report_cards_to_create.append(
+                        report_card_obj
+                    )
+
+                    existing_report_cards[
+                        row["sub_reportcard_id"]
+                    ] = True
 
             if report_cards_to_create:
 
@@ -2045,7 +2184,6 @@ class Command(BaseCommand):
                     ],
                     batch_size=self.BATCH_SIZE
                 )
-
 
     def sync_exam_types(self,school_obj):
 
@@ -2114,13 +2252,14 @@ class Command(BaseCommand):
         existing_exams = {
             e.source_exam_id: e
             for e in Exam.objects.filter(
-                academic_year__school=school_obj
+                school=school_obj
             )
         }
 
         for chunk in self.fetch_in_chunks(query):
 
             exams_to_create = []
+            exams_to_update = []
 
             for row in chunk:
 
@@ -2131,24 +2270,55 @@ class Command(BaseCommand):
                 if not academic_year_obj:
                     continue
 
-                if row["exam_id"] not in existing_exams:
+                existing_exam = existing_exams.get(
+                    row["exam_id"]
+                )
+
+                if existing_exam:
+
+                    existing_exam.academic_year = (
+                        academic_year_obj
+                    )
+
+                    existing_exam.exam_type = (
+                        default_exam_type
+                    )
+
+                    existing_exam.name = row["name"]
+
+                    existing_exam.start_date = (
+                        row["start_date"]
+                    )
+
+                    exams_to_update.append(
+                        existing_exam
+                    )
+
+                else:
+
+                    exam_obj = Exam(
+
+                        school=school_obj,
+
+                        source_exam_id=row["exam_id"],
+
+                        academic_year=academic_year_obj,
+
+                        exam_type=default_exam_type,
+
+                        name=row["name"],
+
+                        start_date=row["start_date"]
+
+                    )
 
                     exams_to_create.append(
-
-                        Exam(
-
-                            source_exam_id=row["exam_id"],
-
-                            academic_year=academic_year_obj,
-
-                            exam_type=default_exam_type,
-
-                            name=row["name"],
-
-                            start_date=row["start_date"]
-
-                        )
+                        exam_obj
                     )
+
+                    existing_exams[
+                        row["exam_id"]
+                    ] = True
 
             if exams_to_create:
 
@@ -2156,6 +2326,20 @@ class Command(BaseCommand):
                     exams_to_create,
                     batch_size=self.BATCH_SIZE
                 )
+
+            if exams_to_update:
+
+                Exam.objects.bulk_update(
+                    exams_to_update,
+                    [
+                        "academic_year",
+                        "exam_type",
+                        "name",
+                        "start_date"
+                    ],
+                    batch_size=self.BATCH_SIZE
+                )
+        
         
     def sync_exam_subjects(self, school_obj):
 
@@ -2169,7 +2353,9 @@ class Command(BaseCommand):
 
         exam_map = {
             e.source_exam_id: e
-            for e in Exam.objects.all()
+            for e in Exam.objects.filter(
+                school=school_obj
+            )
         }
 
         subject_map = {
@@ -2186,7 +2372,9 @@ class Command(BaseCommand):
                 es.subject.id
             ): es
 
-            for es in ExamSubject.objects.all()
+            for es in ExamSubject.objects.filter(
+                subject__school=school_obj
+            )
         }
 
         for chunk in self.fetch_in_chunks(query):
@@ -2220,22 +2408,29 @@ class Command(BaseCommand):
                     subject_obj.id
                 )
 
-                if key not in existing_exam_subjects:
+                if key in existing_exam_subjects:
+                    continue
 
-                    exam_subjects_to_create.append(
+                exam_subjects_to_create.append(
 
-                        ExamSubject(
+                    ExamSubject(
 
-                            exam=exam_obj,
+                        exam=exam_obj,
 
-                            subject=subject_obj,
+                        subject=subject_obj,
 
-                            max_marks=row[
-                                "highest_total_marks"
-                            ] or 0
+                        max_marks=row[
+                            "highest_total_marks"
+                        ] or 0
 
-                        )
                     )
+                )
+
+                # Prevent duplicates in same run
+
+                existing_exam_subjects[
+                    key
+                ] = True
 
             if exam_subjects_to_create:
 
@@ -2243,10 +2438,10 @@ class Command(BaseCommand):
                     exam_subjects_to_create,
                     batch_size=self.BATCH_SIZE
                 )
-    
-    def sync_marks(self,school_obj):
 
-        query="""
+    def sync_marks(self, school_obj):
+
+        query = """
             SELECT
             marks_id,
             class_id,
@@ -2262,20 +2457,19 @@ class Command(BaseCommand):
             FROM student_marks
         """
 
-        student_map={
+        student_map = {
 
             (
                 int(s.student.unique_user_id),
                 s.academic_year.name
-            ):s
+            ): s
 
             for s in StudentEnrollment.objects.filter(
-                student__school=school_obj
+                school=school_obj
             )
         }
 
         exam_subject_map = {
-
             (
                 es.exam.source_exam_id,
                 es.subject.source_subject_id
@@ -2284,21 +2478,23 @@ class Command(BaseCommand):
             for es in ExamSubject.objects.select_related(
                 "exam",
                 "subject"
+            ).filter(
+                subject__school=school_obj
             )
         }
 
-        exam_type_map={
+        exam_type_map = {
 
-            et.name:et
+            et.name: et
 
             for et in ExamType.objects.filter(
                 school=school_obj
             )
         }
 
-        marks_heading_map={}
+        marks_heading_map = {}
 
-        query2="""
+        query2 = """
             SELECT
             marks_headings_id,
             name
@@ -2311,32 +2507,34 @@ class Command(BaseCommand):
 
                 marks_heading_map[
                     str(row2["marks_headings_id"])
-                ]=row2["name"]
+                ] = row2["name"]
 
-        existing_marks={
+        existing_marks = {
 
             (
                 m.student_enrollment.id,
                 m.exam_subject.id,
                 m.exam_type.id
-            ):m
+            ): m
 
             for m in Mark.objects.select_related(
                 "student_enrollment",
                 "exam_subject",
                 "exam_type"
+            ).filter(
+                school=school_obj
             )
         }
 
         for chunk in self.fetch_in_chunks(query):
 
-            marks_to_create=[]
+            marks_to_create = []
 
             for row in chunk:
 
                 try:
 
-                    subject_id=int(
+                    subject_id = int(
                         str(row["subject_id"]).split(",")[0]
                     )
 
@@ -2344,7 +2542,7 @@ class Command(BaseCommand):
 
                     continue
 
-                enrollment_obj=student_map.get(
+                enrollment_obj = student_map.get(
 
                     (
                         row["student_id"],
@@ -2352,7 +2550,7 @@ class Command(BaseCommand):
                     )
                 )
 
-                exam_subject_obj=exam_subject_map.get(
+                exam_subject_obj = exam_subject_map.get(
 
                     (
                         row["exam_id"],
@@ -2365,38 +2563,57 @@ class Command(BaseCommand):
 
                 try:
 
-                    obtained_data=json.loads(
-                        row["mark_obtained"].replace("'",'"')
+                    obtained_data = json.loads(
+                        row["mark_obtained"].replace("'", '"')
                     )
 
-                    highest_data=json.loads(
-                        row["highest_marks"].replace("'",'"')
+                    highest_data = json.loads(
+                        row["highest_marks"].replace("'", '"')
                     )
 
-                    percent_data=json.loads(
-                        row["percent"].replace("'",'"')
-                    )
+                    raw_percent = str(
+                        row["percent"] or ""
+                    ).strip()
 
-                    present_data=json.loads(
-                        row["present"].replace("'",'"')
-                    )
+                    if raw_percent.startswith("{"):
 
-                    if not isinstance(obtained_data,dict):
-                        obtained_data={}
-
-                    if not isinstance(highest_data,dict):
-                        highest_data={}
-
-                    if not isinstance(percent_data,dict):
-                        print(
-                            "BAD PERCENT DATA :",
-                            row["marks_id"],
-                            row["percent"]
+                        percent_data = json.loads(
+                            raw_percent.replace("'", '"')
                         )
-                        percent_data={}
 
-                    if not isinstance(present_data,dict):
-                        present_data={}
+                    else:
+
+                        try:
+
+                            percent_data = float(
+                                raw_percent
+                            )
+
+                        except:
+
+                            percent_data = 0
+
+                    present_data = json.loads(
+                        row["present"].replace("'", '"')
+                    )
+
+                    if not isinstance(
+                        obtained_data,
+                        dict
+                    ):
+                        obtained_data = {}
+
+                    if not isinstance(
+                        highest_data,
+                        dict
+                    ):
+                        highest_data = {}
+
+                    if not isinstance(
+                        present_data,
+                        dict
+                    ):
+                        present_data = {}
 
                 except Exception as e:
 
@@ -2406,43 +2623,78 @@ class Command(BaseCommand):
                         str(e)
                     )
 
+                    print(
+                        "mark_obtained:",
+                        row["mark_obtained"]
+                    )
+
+                    print(
+                        "highest_marks:",
+                        row["highest_marks"]
+                    )
+
+                    print(
+                        "percent:",
+                        row["percent"]
+                    )
+
+                    print(
+                        "present:",
+                        row["present"]
+                    )
+
                     continue
 
-                for marks_heading_id,obtained_marks in obtained_data.items():
+                  
 
-                    heading_name=marks_heading_map.get(
+                for (
+                    marks_heading_id,
+                    obtained_marks
+                ) in obtained_data.items():
+
+                    heading_name = marks_heading_map.get(
                         str(marks_heading_id)
                     )
 
                     if not heading_name:
                         continue
 
-                    exam_type_obj=exam_type_map.get(
+                    exam_type_obj = exam_type_map.get(
                         heading_name
                     )
 
                     if not exam_type_obj:
                         continue
 
-                    total_marks=highest_data.get(
+                    total_marks = highest_data.get(
                         str(marks_heading_id),
                         0
                     )
+                    if isinstance(
+                        percent_data,
+                        dict
+                    ):
 
-                    percentage=percent_data.get(
-                        str(marks_heading_id),
-                        0
-                    )
+                        percentage = percent_data.get(
+                            str(marks_heading_id),
+                            0
+                        )
 
-                    is_present=present_data.get(
+                    else:
+
+                        percentage = percent_data
+
+                    is_present = present_data.get(
                         str(marks_heading_id),
                         "N"
                     )
 
-                    key=(
+                    key = (
 
                         enrollment_obj.id,
+
                         exam_subject_obj.id,
+
                         exam_type_obj.id
                     )
 
@@ -2450,40 +2702,60 @@ class Command(BaseCommand):
                         continue
 
                     try:
-                        obtained_marks=float(obtained_marks)
+                        obtained_marks = float(
+                            obtained_marks
+                        )
                     except:
-                        obtained_marks=0
+                        obtained_marks = 0
 
                     try:
-                        total_marks=float(total_marks)
+                        total_marks = float(
+                            total_marks
+                        )
                     except:
-                        total_marks=0
+                        total_marks = 0
 
                     try:
-                        percentage=float(percentage)
+                        percentage = float(
+                            percentage
+                        )
                     except:
-                        percentage=0
+                        percentage = 0
 
                     marks_to_create.append(
 
                         Mark(
 
-                            student_enrollment=enrollment_obj,
+                            school=school_obj,
 
-                            exam_subject=exam_subject_obj,
+                            source_mark_id=row[
+                                "marks_id"
+                            ],
 
-                            exam_type=exam_type_obj,
+                            student_enrollment=
+                            enrollment_obj,
 
-                            obtained_marks=obtained_marks,
+                            exam_subject=
+                            exam_subject_obj,
 
-                            total_marks=total_marks,
+                            exam_type=
+                            exam_type_obj,
 
-                            percentage=percentage,
+                            obtained_marks=
+                            obtained_marks,
 
-                            is_present=is_present
+                            total_marks=
+                            total_marks,
+
+                            percentage=
+                            percentage,
+
+                            is_present=
+                            is_present
 
                         )
                     )
+                    existing_marks[key] = True
 
             if marks_to_create:
 
@@ -2502,10 +2774,13 @@ class Command(BaseCommand):
 
 
 
-    def sync_attendance_sessions(self,school_obj):
+    def sync_attendance_sessions(self, school_obj):
 
         query="""
             SELECT
+
+            MIN(attendance_id) as attendance_session_id,
+
             class_id,
             section_id,
             subject_id,
@@ -2540,7 +2815,7 @@ class Command(BaseCommand):
         division_map={
             d.source_section_id:d
             for d in Division.objects.filter(
-                class_ref__school=school_obj
+                school=school_obj
             )
         }
 
@@ -2574,7 +2849,9 @@ class Command(BaseCommand):
                 s.date
             ):s
 
-            for s in AttendanceSession.objects.all()
+            for s in AttendanceSession.objects.filter(
+                school=school_obj
+            )
         }
 
         for chunk in self.fetch_in_chunks(query):
@@ -2636,6 +2913,11 @@ class Command(BaseCommand):
 
                     AttendanceSession(
 
+                        school=school_obj,
+
+                        source_attendance_session_id=
+                        row["attendance_session_id"],
+
                         class_ref=class_obj,
 
                         division=division_obj,
@@ -2654,10 +2936,13 @@ class Command(BaseCommand):
 
                         total_absent=total_absent,
 
-                        attendance_percentage=attendance_percentage
+                        attendance_percentage=
+                        attendance_percentage
 
                     )
                 )
+
+                existing_sessions[key] = True
 
             if sessions_to_create:
 
@@ -2666,11 +2951,21 @@ class Command(BaseCommand):
                     batch_size=self.BATCH_SIZE
                 )
 
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Attendance sessions sync completed"
+            )
+        )
+
+
 
     def sync_student_attendance(self,school_obj):
 
         query="""
             SELECT
+
+            attendance_id,
+
             student_id,
             class_id,
             section_id,
@@ -2691,7 +2986,7 @@ class Command(BaseCommand):
             ):se
 
             for se in StudentEnrollment.objects.filter(
-                student__school=school_obj
+                school=school_obj
             )
         }
 
@@ -2708,7 +3003,9 @@ class Command(BaseCommand):
 
             ):s
 
-            for s in AttendanceSession.objects.select_related(
+            for s in AttendanceSession.objects.filter(
+                school=school_obj
+            ).select_related(
                 "class_ref",
                 "division",
                 "subject"
@@ -2786,7 +3083,9 @@ class Command(BaseCommand):
                 sa.student_enrollment.id
             ):sa
 
-            for sa in StudentAttendance.objects.select_related(
+            for sa in StudentAttendance.objects.filter(
+                school=school_obj
+            ).select_related(
                 "session",
                 "student_enrollment"
             )
@@ -2842,11 +3141,18 @@ class Command(BaseCommand):
 
                     StudentAttendance(
 
+                        school=school_obj,
+
+                        source_student_attendance_id=
+                        row["attendance_id"],
+
                         session=session_obj,
 
                         student_enrollment=enrollment_obj,
 
-                        status="Present" if is_present else "Absent",
+                        status="Present"
+                        if is_present
+                        else "Absent",
 
                         is_present=is_present,
 
@@ -2878,6 +3184,10 @@ class Command(BaseCommand):
                     )
                 )
 
+                existing_student_attendance[
+                    key
+                ] = True
+
             if attendance_to_create:
 
                 StudentAttendance.objects.bulk_create(
@@ -2885,21 +3195,38 @@ class Command(BaseCommand):
                     batch_size=self.BATCH_SIZE
                 )
 
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Student attendance sync completed"
+            )
+        )
+
+
+
     def sync_teacher_attendance(self,school_obj):
+       
 
         query="""
             SELECT
+
+            teacher_attendace_id,
+
             employee_id,
             punch_time,
             date
+
             FROM teacher_attendance
         """
 
         working_days_query="""
             SELECT
+
             COUNT(DISTINCT only_date) as total_days,
+
             academic_yr
+
             FROM attendance
+
             GROUP BY academic_yr
         """
 
@@ -2917,7 +3244,7 @@ class Command(BaseCommand):
 
         teacher_map={
 
-            t.employee_id:t
+            str(t.employee_id):t
 
             for t in Teacher.objects.filter(
                 school=school_obj
@@ -2928,7 +3255,9 @@ class Command(BaseCommand):
 
         summary_query="""
             SELECT
+
             ta.employee_id,
+
             a.academic_yr,
 
             COUNT(DISTINCT ta.date) as present_days
@@ -3013,7 +3342,9 @@ class Command(BaseCommand):
                 ta.date
             ):ta
 
-            for ta in TeacherAttendance.objects.select_related(
+            for ta in TeacherAttendance.objects.filter(
+                school=school_obj
+            ).select_related(
                 "teacher"
             )
         }
@@ -3047,11 +3378,15 @@ class Command(BaseCommand):
                         academic_yr
                     ),
                     {}
+
                 )
 
                 key=(
+
                     teacher_obj.id,
+
                     row["date"]
+
                 )
 
                 if key in existing_teacher_attendance:
@@ -3060,6 +3395,11 @@ class Command(BaseCommand):
                 attendance_to_create.append(
 
                     TeacherAttendance(
+
+                        school=school_obj,
+
+                        source_teacher_attendance_id=
+                        row["teacher_attendace_id"],
 
                         teacher=teacher_obj,
 
@@ -3097,13 +3437,22 @@ class Command(BaseCommand):
                     )
                 )
 
+                existing_teacher_attendance[
+                    key
+                ]=True
+
             if attendance_to_create:
 
                 TeacherAttendance.objects.bulk_create(
                     attendance_to_create,
                     batch_size=self.BATCH_SIZE
                 )
-            
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Teacher attendance sync completed"
+            )
+        )
     # ==========================================
     # MAIN HANDLER
     # ==========================================
@@ -3229,3 +3578,4 @@ class Command(BaseCommand):
             traceback.print_exc()
 
             raise
+

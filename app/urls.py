@@ -7,6 +7,7 @@ urlpatterns = [
 
     path("", login_page, name="login"),
     path("api/login/", LoginView.as_view(), name="api_login"),
+    path("logout/", logout_view, name="logout"),
     path("api/me/", MeView.as_view(), name="me"),
     path("parent-dashboard/", parent_dashboard, name="parent_dashboard"),
 

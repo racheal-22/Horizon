@@ -323,3 +323,7 @@ def login_page(request):
 
         return redirect("/parent-dashboard/")
 
+
+def logout_view(request):
+    request.session.flush()
+    return redirect("/")

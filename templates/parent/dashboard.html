@@ -8,85 +8,99 @@ Parent Dashboard
 
 {% block content %}
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-3 px-3 px-lg-4">
 
-    <div class="row g-4">
+    
 
-        <!-- LEFT SIDE -->
+    <nav class="navbar navbar-expand-lg pb-3 mb-3 border-bottom">
 
-        <div class="col-lg-9">
+        <div class="d-flex align-items-center">
+
+            <h2 class="brand-logo mb-0">
+                Horizon
+            </h2>
+
+            <span class="brand-divider mx-3">
+                •
+            </span>
+
+            <span class="brand-subtitle">
+                Student Analytics
+            </span>
+
+        </div>
+
+        <div class="ms-auto">
+            <a href="{% url 'logout' %}" class="btn btn-danger btn-sm px-3">
+                Logout
+            </a>
+        </div>
+
+    </nav>
+
+
+    
+    <div class="row g-3 align-items-start">
+
+        <!-- LEFT COLUMN -->
+
+        <div class="col-12 col-lg-9">
 
             <!-- CHILD + YEAR SELECTOR -->
 
 
-            <div class="glass-card p-3 mb-4">
+            <div class="row g-2 mb-3 align-items-end">
 
-                <div class="row">
+                <div class="col-sm-6 col-md-4">
 
-                    <div class="col-md-4">
+                    <label class="form-label mb-1">
+                        Select Child
+                    </label>
 
-                        <label class="mb-2">
-                            Select Child
-                        </label>
+                    <select
+                        class="form-select form-select-sm"
+                        onchange="
+                        window.location='?child_name=' +
+                        encodeURIComponent(this.value) +
+                        '&academic_year_id={{ selected_year_id }}'
+                        ">
 
-                        <select
-                            class="form-select"
-                            onchange="
-                            window.location='?child_name=' +
-                            encodeURIComponent(this.value) +
-                            '&academic_year_id={{ selected_year_id }}'
-                            ">
+                        {% for child_item in children %}
+                        <option
+                            value="{{ child_item.name }}"
+                            {% if child_item.name == selected_child_name %}selected{% endif %}
+                        >
+                            {{ child_item.name }}
+                        </option>
+                        {% endfor %}
 
-                            {% for child_item in children %}
+                    </select>
 
-                            <option
-                                value="{{ child_item.name }}"
-                                {% if child_item.name == selected_child_name %}
-                                selected
-                                {% endif %}
-                            >
+                </div>
 
-                                {{ child_item.name }}
+                <div class="col-sm-6 col-md-4">
 
-                            </option>
+                    <label class="form-label mb-1">
+                        Academic Year
+                    </label>
 
-                            {% endfor %}
+                    <select
+                        class="form-select form-select-sm"
+                        onchange="
+                        window.location='?child_name={{ selected_child_name|urlencode }}&academic_year_id=' +
+                        this.value
+                        ">
 
-                        </select>
+                        {% for year in academic_years %}
+                        <option
+                            value="{{ year.id }}"
+                            {% if year.id == selected_year_id %}selected{% endif %}
+                        >
+                            {{ year.name }}
+                        </option>
+                        {% endfor %}
 
-                    </div>
-
-                    <div class="col-md-4">
-
-                        <label class="mb-2">
-                            Academic Year
-                        </label>
-
-                        <select
-                            class="form-select"
-                            onchange="
-                            window.location='?child_name={{ selected_child_name|urlencode }}&academic_year_id=' +
-                            this.value
-                            ">
-
-                            {% for year in academic_years %}
-
-                            <option
-                                value="{{ year.id }}"
-                                {% if year.id == selected_year_id %}
-                                selected
-                                {% endif %}
-                            >
-
-                                {{ year.name }}
-
-                            </option>
-
-                            {% endfor %}
-
-                        </select>
-
-                    </div>
+                    </select>
 
                 </div>
 
@@ -94,59 +108,51 @@ Parent Dashboard
 
             {% if child %}
 
-            <!-- STUDENT PROFILE -->
+            <!-- STUDENT PROFILE CARD -->
 
-            <div class="glass-card p-4 mb-4">
+            <div class="glass-card p-3 p-lg-4 mb-3">
 
-                <div class="row align-items-center">
+                <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 gap-md-4">
 
-                    <div class="col-lg-8">
+                    <!-- Avatar + name + badges -->
+                    <div class="d-flex align-items-center gap-3 flex-grow-1">
 
-                        <div class="d-flex align-items-center gap-4">
+                        <div
+                            class="rounded-circle d-flex align-items-center justify-content-center text-white fw-semibold flex-shrink-0"
+                            style="
+                                width:64px;
+                                height:64px;
+                                background:linear-gradient(135deg,#3db8ff,#2dd4bf);
+                                font-size:24px;
+                            ">
+                            {{ child.first_name|first }}{{ child.last_name|first }}
+                        </div>
 
-                            <div
-                                class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
-                                style="
-                                    width:70px;
-                                    height:70px;
-                                    background:linear-gradient(135deg,#3db8ff,#2dd4bf);
-                                    font-size:28px;
-                                ">
+                        <div>
 
-                                {{ child.first_name|first }}{{ child.last_name|first }}
+                            <h5 class="fw-semibold mb-2">
+                                {{ child.first_name }} {{ child.last_name }}
+                            </h5>
 
-                            </div>
+                            <div class="d-flex flex-wrap gap-2">
 
-                            <div>
+                                <span class="badge bg-light text-dark p-2">
+                                    🎓 Std {{ std }}
+                                </span>
 
-                                <h3 class="fw-bold mb-3">
+                                <span class="badge bg-light text-dark p-2">
+                                    📋 Div {{ division }}
+                                </span>
 
-                                    {{ child.first_name }}
-                                    {{ child.last_name }}
+                                {% if enrollment %}
+                                <span class="badge bg-light text-dark p-2">
+                                    📅 {{ enrollment.academic_year.name }}
+                                </span>
+                                {% endif %}
 
-                                </h3>
-
-                                <div class="d-flex flex-wrap gap-2">
-
-                                    <span class="badge bg-light text-dark p-2">
-                                        🎓 Std {{ std }}
-                                    </span>
-
-                                    <span class="badge bg-light text-dark p-2">
-                                        📋 Div {{ division }}
-                                    </span>
-
-                                    {% if enrollment %}
-                                    <span class="badge bg-light text-dark p-2">
-                                        📅 {{ enrollment.academic_year.name }}
-                                    </span>
-                                    {% endif %}
-
-                                    <span class="badge bg-light text-dark p-2">
-                                        🎫 Roll No : {{ roll_number }}
-                                    </span>
-
-                                </div>
+                                <span class="badge bg-light text-dark p-2">
+                                    🎫 Roll No : {{ roll_number }}
+                                </span>
 
                             </div>
 
@@ -154,24 +160,16 @@ Parent Dashboard
 
                     </div>
 
-                    <div class="col-lg-4">
+                    <!-- Progress bars -->
 
-                        <div class="mb-4">
+                    <div class="flex-shrink-0" style="min-width:200px; max-width:260px; width:100%;">
 
-                            <div class="d-flex justify-content-between mb-2">
-
-                                <span>
-                                    Overall Score
-                                </span>
-
-                                <strong>
-                                    {{ overall_score }}%
-                                </strong>
-
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small text-muted">Overall Score</span>
+                                <span class="small fw-semibold">{{ overall_score }}%</span>
                             </div>
-
-                            <div class="progress">
-
+                            <div class="progress" style="height:7px;">
                                 <div
                                     class="progress-bar"
                                     style="
@@ -179,36 +177,20 @@ Parent Dashboard
                                         background:linear-gradient(135deg,#14b8a6,#3b82f6);
                                     ">
                                 </div>
-
                             </div>
-
                         </div>
 
                         <div>
-
-                            <div class="d-flex justify-content-between mb-2">
-
-                                <span>
-                                    Attendance
-                                </span>
-
-                                <strong>
-                                    {{ days_present }}%
-                                </strong>
-
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small text-muted">Attendance</span>
+                                <span class="small fw-semibold">{{ days_present }}%</span>
                             </div>
-
-                            <div class="progress">
-
+                            <div class="progress" style="height:7px;">
                                 <div
                                     class="progress-bar bg-success"
-                                    style="
-                                        width:{{ days_present }}%;
-                                    ">
+                                    style="width:{{ days_present }}%;">
                                 </div>
-
                             </div>
-
                         </div>
 
                     </div>
@@ -217,129 +199,69 @@ Parent Dashboard
 
             </div>
 
-            <!-- NAVIGATION -->
+            <!-- NAVIGATION TABS -->
 
-            <div class="glass-card p-3 mb-4">
+            
+            <div class="dashboard-tabs mb-3">
 
-                <div class="dashboard-tabs">
-
-                    <div class="dashboard-tab active">
-                        Overview
-                    </div>
-
-                    <div class="dashboard-tab">
-                        Subjects
-                    </div>
-
-                    <div class="dashboard-tab">
-                        Graphs
-                    </div>
-
-                    <div class="dashboard-tab">
-                        Achievements
-                    </div>
-
-                    <div class="dashboard-tab">
-                        Extra Help
-                    </div>
-
-                </div>
+                <div class="dashboard-tab active">Overview</div>
+                <div class="dashboard-tab">Subjects</div>
+                <div class="dashboard-tab">Graphs</div>
+                <div class="dashboard-tab">Achievements</div>
+                <div class="dashboard-tab">Extra Help</div>
 
             </div>
 
-            <!-- OVERVIEW -->
+            <!-- OVERVIEW SECTION -->
 
-            <div class="glass-card p-4">
+            <div class="glass-card p-3 p-lg-4">
 
-                <h4 class="mb-4">
+                <h6 class="text-muted text-uppercase fw-semibold mb-3" style="font-size:11px; letter-spacing:0.8px;">
                     Student Overview
-                </h4>
+                </h6>
 
-                <div class="row">
+                <div class="row g-2">
 
-                    <div class="col-md-6 mb-3">
-
-                        <div class="border rounded p-3">
-
-                            <h6>Student Name</h6>
-
-                            <strong>
-                                {{ child.first_name }}
-                                {{ child.last_name }}
-                            </strong>
-
+                    <div class="col-6 col-md-4">
+                        <div class="border-start border-3 ps-3 py-1" style="border-color:var(--blue) !important;">
+                            <div class="text-muted small mb-1">Student Name</div>
+                            <div class="fw-semibold small">{{ child.first_name }} {{ child.last_name }}</div>
                         </div>
-
                     </div>
 
-                    <div class="col-md-6 mb-3">
-
-                        <div class="border rounded p-3">
-
-                            <h6>Class</h6>
-
-                            <strong>
-                                {{ std }}
-                            </strong>
-
+                    <div class="col-6 col-md-4">
+                        <div class="border-start border-3 ps-3 py-1" style="border-color:var(--blue) !important;">
+                            <div class="text-muted small mb-1">Class</div>
+                            <div class="fw-semibold small">{{ std }}</div>
                         </div>
-
                     </div>
 
-                    <div class="col-md-6 mb-3">
-
-                        <div class="border rounded p-3">
-
-                            <h6>Division</h6>
-
-                            <strong>
-                                {{ division }}
-                            </strong>
-
+                    <div class="col-6 col-md-4">
+                        <div class="border-start border-3 ps-3 py-1" style="border-color:var(--blue) !important;">
+                            <div class="text-muted small mb-1">Division</div>
+                            <div class="fw-semibold small">{{ division }}</div>
                         </div>
-
                     </div>
 
-                    <div class="col-md-6 mb-3">
-
-                        <div class="border rounded p-3">
-
-                            <h6>Roll Number</h6>
-
-                            <strong>
-                                {{ roll_number }}
-                            </strong>
-
+                    <div class="col-6 col-md-4">
+                        <div class="border-start border-3 ps-3 py-1" style="border-color:var(--blue) !important;">
+                            <div class="text-muted small mb-1">Roll Number</div>
+                            <div class="fw-semibold small">{{ roll_number }}</div>
                         </div>
-
                     </div>
 
-                    <div class="col-md-6 mb-3">
-
-                        <div class="border rounded p-3">
-
-                            <h6>Average Score</h6>
-
-                            <strong>
-                                {{ overall_score }}%
-                            </strong>
-
+                    <div class="col-6 col-md-4">
+                        <div class="border-start border-3 ps-3 py-1" style="border-color:var(--green) !important;">
+                            <div class="text-muted small mb-1">Average Score</div>
+                            <div class="fw-semibold small">{{ overall_score }}%</div>
                         </div>
-
                     </div>
 
-                    <div class="col-md-6 mb-3">
-
-                        <div class="border rounded p-3">
-
-                            <h6>Attendance</h6>
-
-                            <strong>
-                                {{ days_present }}%
-                            </strong>
-
+                    <div class="col-6 col-md-4">
+                        <div class="border-start border-3 ps-3 py-1" style="border-color:var(--green) !important;">
+                            <div class="text-muted small mb-1">Attendance</div>
+                            <div class="fw-semibold small">{{ days_present }}%</div>
                         </div>
-
                     </div>
 
                 </div>
@@ -350,84 +272,80 @@ Parent Dashboard
 
         </div>
 
-        <!-- RIGHT SIDE -->
 
-        <div class="col-lg-3">
+        <!-- RIGHT SIDEBAR -->
 
-            <div class="glass-card p-4 mb-4">
+        
+        <div class="col-12 col-lg-3">
+            <div class="sticky-lg-top" style="top:16px;">
 
-                <h5 class="fw-bold mb-3">
-                    🚀 What Can I Become?
-                </h5>
+                <div class="glass-card p-3 mb-3">
 
-                <p class="small text-muted">
-                    AI career guidance will be integrated later.
-                </p>
+                    <h6 class="fw-semibold mb-2">
+                        🚀 What Can I Become?
+                    </h6>
 
-                <input
-                    type="text"
-                    class="form-control mb-3"
-                    placeholder="Doctor, Engineer, Artist..."
-                >
+                    <p class="small text-muted mb-3">
+                        AI career guidance will be integrated later.
+                    </p>
 
-                <button class="btn btn-primary-custom w-100">
-                    Show Career Options
-                </button>
+                    <input
+                        type="text"
+                        class="form-control form-control-sm mb-2"
+                        placeholder="Doctor, Engineer, Artist..."
+                    >
 
-            </div>
+                    <button class="btn btn-primary-custom w-100 btn-sm">
+                        Show Career Options
+                    </button>
 
-            <div class="glass-card p-4 mb-4">
+                </div>
 
-                <h5 class="fw-bold mb-3">
-                    ✨ AI Powered Summary
-                </h5>
+                <div class="glass-card p-3 mb-3">
 
-                <p class="text-muted mb-0">
-                    Personalized AI insights will appear here.
-                </p>
+                    <h6 class="fw-semibold mb-2">
+                        ✨ AI Powered Summary
+                    </h6>
 
-            </div>
+                    <p class="text-muted small mb-0">
+                        Personalized AI insights will appear here.
+                    </p>
 
-            <div class="glass-card p-4">
+                </div>
 
-                <h5 class="fw-bold mb-3">
-                    👨‍👩‍👧 Parent Details
-                </h5>
+                <div class="glass-card p-3">
 
-                <table class="table table-borderless">
+                    <h6 class="fw-semibold mb-2">
+                        👨‍👩‍👧 Parent Details
+                    </h6>
 
-                    <tr>
-                        <td>Father</td>
-                        <td class="text-end">
-                            {{ father_name }}
-                        </td>
-                    </tr>
+                    <table class="table table-borderless table-sm mb-0">
 
-                    <tr>
-                        <td>Mother</td>
-                        <td class="text-end">
-                            {{ mother_name }}
-                        </td>
-                    </tr>
+                        <tr>
+                            <td class="text-muted ps-0 small">Father</td>
+                            <td class="text-end pe-0 small fw-semibold">{{ father_name }}</td>
+                        </tr>
 
-                    <tr>
-                        <td>Guardian</td>
-                        <td class="text-end">
-                            {{ guardian }}
-                        </td>
-                    </tr>
+                        <tr>
+                            <td class="text-muted ps-0 small">Mother</td>
+                            <td class="text-end pe-0 small fw-semibold">{{ mother_name }}</td>
+                        </tr>
 
-                    <tr>
-                        <td>Phone</td>
-                        <td class="text-end fw-bold">
-                            {{ phone }}
-                        </td>
-                    </tr>
+                        <tr>
+                            <td class="text-muted ps-0 small">Guardian</td>
+                            <td class="text-end pe-0 small fw-semibold">{{ guardian }}</td>
+                        </tr>
 
-                </table>
+                        <tr>
+                            <td class="text-muted ps-0 small">Phone</td>
+                            <td class="text-end pe-0 small fw-semibold">{{ phone }}</td>
+                        </tr>
+
+                    </table>
+
+                </div>
 
             </div>
-
         </div>
 
     </div>

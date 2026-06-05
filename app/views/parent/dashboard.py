@@ -101,9 +101,11 @@ def get_selected_child_name(
 
 def get_academic_years():
 
-    return AcademicYear.objects.order_by(
-        "-start_date"
-    )
+    active_year = AcademicYear.objects.filter(is_active=True).first()
+    if not active_year:
+        return AcademicYear.objects.none()
+
+    return AcademicYear.objects.filter(start_date__lte=active_year.start_date).order_by("-start_date")[:5]
 
 
 def get_selected_academic_year(request):

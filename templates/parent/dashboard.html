@@ -201,17 +201,35 @@ Parent Dashboard
 
             <!-- NAVIGATION TABS -->
 
-            
+                        
             <div class="dashboard-tabs mb-3">
 
-                <div class="dashboard-tab active">Overview</div>
-                <div class="dashboard-tab">Subjects</div>
-                <div class="dashboard-tab">Graphs</div>
-                <div class="dashboard-tab">Achievements</div>
-                <div class="dashboard-tab">Extra Help</div>
+                <div class="dashboard-tab active"
+                    onclick="showTab('overview', this)">
+                    Overview
+                </div>
+
+                <div class="dashboard-tab"
+                    onclick="showTab('subjects', this)">
+                    Subjects
+                </div>
+
+                <div class="dashboard-tab"
+                    onclick="showTab('graphs', this)">
+                    Graphs
+                </div>
+
+                <div class="dashboard-tab"
+                    onclick="showTab('achievements', this)">
+                    Achievements
+                </div>
+
+                <div class="dashboard-tab"
+                    onclick="showTab('extra-help', this)">
+                    Extra Help
+                </div>
 
             </div>
-
             <!-- OVERVIEW SECTION -->
 
             <div class="glass-card p-3 p-lg-4">
@@ -270,9 +288,81 @@ Parent Dashboard
 
             {% endif %}
 
+        
+
+            <div id="subjects-tab"
+                class="tab-content"
+                style="display:none;">
+
+                <div class="glass-card p-4">
+
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+
+                        <div>
+
+                            <h5 class="fw-semibold mb-1">
+                                Subject Performance
+                            </h5>
+
+                            <small class="text-muted">
+                                Performance across all subjects
+                            </small>
+
+                        </div>
+
+                    </div>
+
+                    {% for subject in subject_wise_marks %}
+
+                    <div class="subject-row">
+
+                        <div class="subject-info">
+
+                            <div class="fw-semibold">
+                                {{ subject.subject_name }}
+                            </div>
+
+                            <small class="text-muted">
+                                {{ subject.total_obtained }}
+                                /
+                                {{ subject.total_marks }}
+                                Marks
+                            </small>
+
+                        </div>
+
+                        <div class="subject-score">
+
+                            <div class="fw-bold">
+                                {{ subject.percentage }}%
+                            </div>
+
+                            <div class="subject-progress">
+
+                                <div
+                                    class="subject-progress-fill"
+                                    style="width:{{ subject.percentage }}%;">
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    {% empty %}
+
+                    <div class="text-center py-4 text-muted">
+                        No subject data available
+                    </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
         </div>
-
-
         <!-- RIGHT SIDEBAR -->
 
         
@@ -351,5 +441,9 @@ Parent Dashboard
     </div>
 
 </div>
+<script
+    src="{% static 'js/parent.js' %}">
+</script>
 
+</body>
 {% endblock %}

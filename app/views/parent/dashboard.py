@@ -1,4 +1,6 @@
+
 from django.shortcuts import render, redirect
+from collections import OrderedDict
 
 from app.models import (
     User,
@@ -6,7 +8,8 @@ from app.models import (
     Student,
     AcademicYear,
     StudentEnrollment,
-    StudentYearSummary
+    StudentYearSummary,
+    Mark,
 )
 
 
@@ -217,6 +220,80 @@ def get_student_year_summary(
     ).first()
 
 
+def get_subject_wise_marks(enrollment):
+
+    if not enrollment:
+        return []
+
+    subjects = OrderedDict()
+
+    marks = Mark.objects.filter(student_enrollment=enrollment).select_related(
+        "exam_subject__exam",
+        "exam_subject__subject__subject_master",
+        "exam_type"
+    )
+
+    for mark in marks:
+
+        subject_name = mark.exam_subject.subject.subject_master.name
+        exam_name = mark.exam_subject.exam.name
+        exam_type_name = mark.exam_type.name if mark.exam_type else "N/A"
+
+        if subject_name not in subjects:
+            subjects[subject_name] = {
+                "subject_name": subject_name,
+                "total_obtained": 0,
+                "total_marks": 0,
+                "percentage": 0,
+                "exams": OrderedDict()
+            }
+
+        subject = subjects[subject_name]
+
+        obtained = float(mark.obtained_marks or 0)
+        total = float(mark.total_marks or 0)
+
+        subject["total_obtained"] += obtained
+        subject["total_marks"] += total
+
+        if exam_name not in subject["exams"]:
+            subject["exams"][exam_name] = {
+                "exam_name": exam_name,
+                "exam_total_obtained": 0,
+                "exam_total_marks": 0,
+                "exam_percentage": 0,
+                "exam_types": []
+            }
+
+        exam = subject["exams"][exam_name]
+
+        exam["exam_total_obtained"] += obtained
+        exam["exam_total_marks"] += total
+
+        exam["exam_types"].append({
+            "exam_type": exam_type_name,
+            "obtained": obtained,
+            "total": total,
+            "percentage": float(mark.percentage or 0)
+        })
+
+    result = []
+
+    for subject in subjects.values():
+
+        if subject["total_marks"]:
+            subject["percentage"] = round((subject["total_obtained"] / subject["total_marks"]) * 100, 2)
+
+        for exam in subject["exams"].values():
+            if exam["exam_total_marks"]:
+                exam["exam_percentage"] = round((exam["exam_total_obtained"] / exam["exam_total_marks"]) * 100, 2)
+
+        subject["exams"] = list(subject["exams"].values())
+        result.append(subject)
+
+    return result
+
+
 def parent_dashboard(request):
 
     user = get_logged_in_user(
@@ -293,6 +370,10 @@ def parent_dashboard(request):
         enrollment
     )
 
+    subject_wise_marks = get_subject_wise_marks(
+        enrollment
+    )
+
     return render(
         request,
         "parent/dashboard.html",
@@ -323,6 +404,9 @@ def parent_dashboard(request):
 
             "summary":
             summary,
+
+            "subject_wise_marks":
+            subject_wise_marks,
 
             "std":
             (

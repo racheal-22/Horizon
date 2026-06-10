@@ -2185,17 +2185,17 @@ class Command(BaseCommand):
                     batch_size=self.BATCH_SIZE
                 )
 
-    def sync_exam_types(self,school_obj):
+    def sync_exam_types(self, school_obj):
 
-        query="""
+        query = """
             SELECT
             marks_headings_id,
             name
             FROM marks_headings
         """
 
-        existing_exam_types={
-            e.name:e
+        existing_exam_types = {
+            e.source_exam_type_id: e
             for e in ExamType.objects.filter(
                 school=school_obj
             )
@@ -2203,22 +2203,32 @@ class Command(BaseCommand):
 
         for chunk in self.fetch_in_chunks(query):
 
-            exam_types_to_create=[]
+            exam_types_to_create = []
 
             for row in chunk:
 
-                if row["name"] not in existing_exam_types:
+                if row["marks_headings_id"] not in existing_exam_types:
 
                     exam_types_to_create.append(
 
                         ExamType(
 
                             school=school_obj,
+
+                            source_exam_type_id=row[
+                                "marks_headings_id"
+                            ],
+
                             name=row["name"],
+
                             weightage=0
 
                         )
                     )
+
+                existing_exam_types[
+                    row["marks_headings_id"]
+                ] = True
 
             if exam_types_to_create:
 
@@ -2351,29 +2361,31 @@ class Command(BaseCommand):
             FROM student_marks
         """
 
+        school_id = school_obj.id
+
         exam_map = {
             e.source_exam_id: e
             for e in Exam.objects.filter(
-                school=school_obj
+                school_id=school_id
             )
         }
 
         subject_map = {
             s.source_subject_id: s
             for s in Subject.objects.filter(
-                school=school_obj
+                school_id=school_id
             )
         }
 
         existing_exam_subjects = {
 
             (
-                es.exam.id,
-                es.subject.id
+                es.exam_id,
+                es.subject_id
             ): es
 
             for es in ExamSubject.objects.filter(
-                subject__school=school_obj
+                school_id=school_id
             )
         }
 
@@ -2415,6 +2427,8 @@ class Command(BaseCommand):
 
                     ExamSubject(
 
+                        school_id=school_id,
+
                         exam=exam_obj,
 
                         subject=subject_obj,
@@ -2426,8 +2440,6 @@ class Command(BaseCommand):
                     )
                 )
 
-                # Prevent duplicates in same run
-
                 existing_exam_subjects[
                     key
                 ] = True
@@ -2438,6 +2450,12 @@ class Command(BaseCommand):
                     exam_subjects_to_create,
                     batch_size=self.BATCH_SIZE
                 )
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Exam subjects sync completed"
+            )
+        )
 
     def sync_marks(self, school_obj):
 

@@ -137,46 +137,37 @@ class Command(BaseCommand):
             FROM issue_return
         """
 
-        # student.id matches member_id
         student_map = {
-
             s.id: s
-
             for s in Student.objects.filter(
                 school=school_obj
             )
         }
 
-        # teacher.teacher_id matches member_id
         teacher_map = {
-
             t.teacher_id: t
-
             for t in Teacher.objects.filter(
                 school=school_obj
             )
         }
 
-        # mysql book_id matches source_book_id
         book_map = {
-
             b.source_book_id: b
-
             for b in Book.objects.filter(
                 school=school_obj
             )
         }
 
         existing_issues = {
-
             (
                 bi.book_id,
                 bi.student_id,
                 bi.teacher_id,
                 bi.issue_date
             ): bi
-
-            for bi in BookIssue.objects.all()
+            for bi in BookIssue.objects.filter(
+                school=school_obj
+            )
         }
 
         for chunk in self.fetch_in_chunks(query):
@@ -188,14 +179,12 @@ class Command(BaseCommand):
                 student_obj = None
                 teacher_obj = None
 
-                # student issue
                 if row["member_type"] == "S":
 
                     student_obj = student_map.get(
                         row["member_id"]
                     )
 
-                # teacher issue
                 elif row["member_type"] == "T":
 
                     teacher_obj = teacher_map.get(
@@ -224,12 +213,13 @@ class Command(BaseCommand):
                 status = "Issued"
 
                 if str(return_date) != "0000-00-00":
-
                     status = "Returned"
 
                 issues_to_create.append(
 
                     BookIssue(
+
+                        school=school_obj,
 
                         book=book_obj,
 
@@ -241,7 +231,9 @@ class Command(BaseCommand):
 
                         due_date=row["due_date"],
 
-                        return_date=None if str(return_date) == "0000-00-00" else return_date,
+                        return_date=None
+                        if str(return_date) == "0000-00-00"
+                        else return_date,
 
                         member_type=row["member_type"],
 

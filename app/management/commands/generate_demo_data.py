@@ -16,6 +16,7 @@ from app.models import (
     StudentEnrollment,
     Teacher,
     Student,
+    School,
 )
 
 fake = Faker()
@@ -28,8 +29,7 @@ class Command(BaseCommand):
     # =====================================
     # HOMEWORK
     # =====================================
-
-    def generate_homework(self):
+    def generate_homework(self, school_obj):
 
         homework_titles = [
             "Math Worksheet",
@@ -44,6 +44,8 @@ class Command(BaseCommand):
         subjects = Subject.objects.select_related(
             "division",
             "academic_year"
+        ).filter(
+            school=school_obj
         )
 
         homework_count = 0
@@ -55,6 +57,7 @@ class Command(BaseCommand):
                 continue
 
             enrollments = StudentEnrollment.objects.filter(
+                school=school_obj,
                 division=subject.division,
                 academic_year=subject.academic_year
             )
@@ -69,6 +72,8 @@ class Command(BaseCommand):
             for _ in range(random.randint(2, 5)):
 
                 homework = Homework.objects.create(
+
+                    school=school_obj,
 
                     division=subject.division,
 
@@ -105,6 +110,8 @@ class Command(BaseCommand):
 
                         HomeworkSubmission(
 
+                            school=school_obj,
+
                             homework=homework,
 
                             student_enrollment=enrollment,
@@ -130,12 +137,10 @@ class Command(BaseCommand):
                 f"{submission_count} submissions generated"
             )
         )
-
     # =====================================
     # REMEDIAL
     # =====================================
-
-    def generate_remedial(self):
+    def generate_remedial(self, school_obj):
 
         remedial_notes = [
             "Needs grammar improvement",
@@ -150,11 +155,14 @@ class Command(BaseCommand):
         enrollments = StudentEnrollment.objects.select_related(
             "division",
             "academic_year"
+        ).filter(
+            school=school_obj
         )
 
         for enrollment in enrollments:
 
             pending_homework = HomeworkSubmission.objects.filter(
+                school=school_obj,
                 student_enrollment=enrollment,
                 status="Pending"
             ).exists()
@@ -171,6 +179,7 @@ class Command(BaseCommand):
                 continue
 
             subjects = Subject.objects.filter(
+                school=school_obj,
                 division=enrollment.division,
                 academic_year=enrollment.academic_year
             )
@@ -185,6 +194,8 @@ class Command(BaseCommand):
 
             RemedialSession.objects.create(
 
+                school=school_obj,
+
                 student_enrollment=enrollment,
 
                 academic_year=enrollment.academic_year,
@@ -198,7 +209,9 @@ class Command(BaseCommand):
                     end_date="today"
                 ),
 
-                notes=random.choice(remedial_notes)
+                notes=random.choice(
+                    remedial_notes
+                )
             )
 
             remedial_count += 1
@@ -208,12 +221,10 @@ class Command(BaseCommand):
                 f"{remedial_count} remedial sessions generated"
             )
         )
-
     # =====================================
     # STUDENT ACHIEVEMENTS
     # =====================================
-
-    def generate_student_achievements(self):
+    def generate_student_achievements(self, school_obj):
 
         titles = [
             "Science Olympiad Winner",
@@ -226,7 +237,9 @@ class Command(BaseCommand):
 
         count = 0
 
-        students = Student.objects.all()
+        students = Student.objects.filter(
+            school=school_obj
+        )
 
         for student in students:
 
@@ -239,6 +252,7 @@ class Command(BaseCommand):
                 continue
 
             enrollment = StudentEnrollment.objects.filter(
+                school=school_obj,
                 student=student
             ).first()
 
@@ -246,6 +260,8 @@ class Command(BaseCommand):
                 continue
 
             StudentAchievement.objects.create(
+
+                school=school_obj,
 
                 student=student,
 
@@ -275,12 +291,11 @@ class Command(BaseCommand):
                 f"{count} student achievements generated"
             )
         )
-
     # =====================================
     # TEACHER ACHIEVEMENTS
     # =====================================
 
-    def generate_teacher_achievements(self):
+    def generate_teacher_achievements(self, school_obj):
 
         titles = [
             "Best Teacher Award",
@@ -291,7 +306,9 @@ class Command(BaseCommand):
 
         count = 0
 
-        teachers = Teacher.objects.all()
+        teachers = Teacher.objects.filter(
+            school=school_obj
+        )
 
         for teacher in teachers:
 
@@ -305,9 +322,13 @@ class Command(BaseCommand):
 
             TeacherAchievement.objects.create(
 
+                school=school_obj,
+
                 teacher_id=teacher.id,
 
-                title=random.choice(titles),
+                title=random.choice(
+                    titles
+                ),
 
                 description=fake.paragraph(),
 
@@ -324,22 +345,24 @@ class Command(BaseCommand):
                 f"{count} teacher achievements generated"
             )
         )
-
     # =====================================
     # HEALTH
     # =====================================
-
-    def generate_health_records(self):
+    def generate_health_records(self, school_obj):
 
         count = 0
 
-        students = Student.objects.all()
+        students = Student.objects.filter(
+            school=school_obj
+        )
 
         for student in students:
 
             for _ in range(2):
 
                 StudentHealthRecord.objects.create(
+
+                    school=school_obj,
 
                     student=student,
 
@@ -366,12 +389,10 @@ class Command(BaseCommand):
                 f"{count} health records generated"
             )
         )
-
     # =====================================
     # PROJECTS
     # =====================================
-
-    def generate_projects(self):
+    def generate_projects(self, school_obj):
 
         titles = [
             "AI Chatbot",
@@ -383,7 +404,9 @@ class Command(BaseCommand):
 
         count = 0
 
-        students = Student.objects.all()
+        students = Student.objects.filter(
+            school=school_obj
+        )
 
         for student in students:
 
@@ -397,9 +420,13 @@ class Command(BaseCommand):
 
             Project.objects.create(
 
+                school=school_obj,
+
                 student=student,
 
-                title=random.choice(titles),
+                title=random.choice(
+                    titles
+                ),
 
                 description=fake.paragraph(),
 
@@ -423,12 +450,10 @@ class Command(BaseCommand):
                 f"{count} projects generated"
             )
         )
-
     # =====================================
     # TEACHER ACTIVENESS
     # =====================================
-
-    def generate_teacher_activeness(self):
+    def generate_teacher_activeness(self, school_obj):
 
         events = [
             "Annual Day",
@@ -445,6 +470,8 @@ class Command(BaseCommand):
             "division",
             "class_ref",
             "academic_year"
+        ).filter(
+            school=school_obj
         )
 
         for subject in subjects:
@@ -456,6 +483,8 @@ class Command(BaseCommand):
 
                 TeacherActiveness.objects.create(
 
+                    school=school_obj,
+
                     teacher_id=subject.teacher_id,
 
                     class_ref=subject.class_ref,
@@ -464,7 +493,9 @@ class Command(BaseCommand):
 
                     academic_year=subject.academic_year,
 
-                    event_name=random.choice(events),
+                    event_name=random.choice(
+                        events
+                    ),
 
                     event_type=random.choice([
                         "Academic",
@@ -492,12 +523,10 @@ class Command(BaseCommand):
                 f"{count} teacher activeness generated"
             )
         )
-
     # =====================================
     # PARENT FEEDBACK
     # =====================================
-
-    def generate_parent_feedback(self):
+    def generate_parent_feedback(self, school_obj):
 
         feedbacks = [
             "Very supportive teacher",
@@ -513,6 +542,8 @@ class Command(BaseCommand):
             "student",
             "division",
             "academic_year"
+        ).filter(
+            school=school_obj
         )
 
         for enrollment in enrollments:
@@ -523,6 +554,7 @@ class Command(BaseCommand):
                 continue
 
             subjects = Subject.objects.filter(
+                school=school_obj,
                 division=enrollment.division,
                 academic_year=enrollment.academic_year
             )
@@ -537,6 +569,8 @@ class Command(BaseCommand):
 
             ParentFeedback.objects.create(
 
+                school=school_obj,
+
                 parent=student.parent,
 
                 teacher_id=subject.teacher_id,
@@ -545,7 +579,9 @@ class Command(BaseCommand):
 
                 academic_year=enrollment.academic_year,
 
-                feedback_text=random.choice(feedbacks),
+                feedback_text=random.choice(
+                    feedbacks
+                ),
 
                 rating=random.randint(3, 5)
             )
@@ -561,38 +597,87 @@ class Command(BaseCommand):
     # =====================================
     # HANDLE
     # =====================================
-
     def handle(self, *args, **kwargs):
+
+        school_obj = School.objects.first()
+
+        if not school_obj:
+
+            self.stdout.write(
+                self.style.ERROR(
+                    "No school found"
+                )
+            )
+
+            return
 
         self.stdout.write("Deleting old demo data...")
 
-        HomeworkSubmission.objects.all().delete()
-        Homework.objects.all().delete()
-        RemedialSession.objects.all().delete()
-        StudentAchievement.objects.all().delete()
-        TeacherAchievement.objects.all().delete()
-        StudentHealthRecord.objects.all().delete()
-        Project.objects.all().delete()
-        TeacherActiveness.objects.all().delete()
-        ParentFeedback.objects.all().delete()
+        HomeworkSubmission.objects.filter(
+            school=school_obj
+        ).delete()
+
+        Homework.objects.filter(
+            school=school_obj
+        ).delete()
+
+        RemedialSession.objects.filter(
+            school=school_obj
+        ).delete()
+
+        StudentAchievement.objects.filter(
+            school=school_obj
+        ).delete()
+
+        TeacherAchievement.objects.filter(
+            school=school_obj
+        ).delete()
+
+        StudentHealthRecord.objects.filter(
+            school=school_obj
+        ).delete()
+
+        Project.objects.filter(
+            school=school_obj
+        ).delete()
+
+        TeacherActiveness.objects.filter(
+            school=school_obj
+        ).delete()
+
+        ParentFeedback.objects.filter(
+            school=school_obj
+        ).delete()
 
         self.stdout.write("Old data deleted")
 
-        self.generate_homework()
+        self.generate_homework(school_obj)
 
-        self.generate_remedial()
+        self.generate_remedial(school_obj)
 
-        self.generate_student_achievements()
+        self.generate_student_achievements(
+            school_obj
+        )
 
-        self.generate_teacher_achievements()
+        self.generate_teacher_achievements(
+            school_obj
+        )
 
-        self.generate_health_records()
+        self.generate_health_records(
+            school_obj
+        )
 
-        self.generate_projects()
+        self.generate_projects(
+            school_obj
+        )
 
-        self.generate_teacher_activeness()
+        self.generate_teacher_activeness(
+            school_obj
+        )
 
-        self.generate_parent_feedback()
+        self.generate_parent_feedback(
+            school_obj
+        )
 
         self.stdout.write(
             self.style.SUCCESS(

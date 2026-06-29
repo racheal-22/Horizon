@@ -10,8 +10,7 @@ Parent Dashboard
 
 <div class="container-fluid py-3 px-3 px-lg-4">
 
-    
-
+    <!-- TOP NAVBAR -->
     <nav class="navbar navbar-expand-lg pb-3 mb-3 border-bottom">
 
         <div class="d-flex align-items-center">
@@ -38,33 +37,24 @@ Parent Dashboard
 
     </nav>
 
-
-    
+    <!-- MAIN LAYOUT -->
     <div class="row g-3 align-items-start">
 
         <!-- LEFT COLUMN -->
-
         <div class="col-12 col-lg-9">
 
-            <!-- CHILD + YEAR SELECTOR -->
-
-
+            <!-- CHILD + YEAR SELECTORS -->
             <div class="row g-2 mb-3 align-items-end">
 
                 <div class="col-sm-6 col-md-4">
-
-                    <label class="form-label mb-1">
-                        Select Child
-                    </label>
-
+                    <label class="form-label mb-1">Select Child</label>
                     <select
                         class="form-select form-select-sm"
                         onchange="
-                        window.location='?child_name=' +
-                        encodeURIComponent(this.value) +
-                        '&academic_year_id={{ selected_year_id }}'
+                            window.location='?child_name=' +
+                            encodeURIComponent(this.value) +
+                            '&academic_year_id={{ selected_year_id }}'
                         ">
-
                         {% for child_item in children %}
                         <option
                             value="{{ child_item.name }}"
@@ -73,24 +63,17 @@ Parent Dashboard
                             {{ child_item.name }}
                         </option>
                         {% endfor %}
-
                     </select>
-
                 </div>
 
                 <div class="col-sm-6 col-md-4">
-
-                    <label class="form-label mb-1">
-                        Academic Year
-                    </label>
-
+                    <label class="form-label mb-1">Academic Year</label>
                     <select
                         class="form-select form-select-sm"
                         onchange="
-                        window.location='?child_name={{ selected_child_name|urlencode }}&academic_year_id=' +
-                        this.value
+                            window.location='?child_name={{ selected_child_name|urlencode }}&academic_year_id=' +
+                            this.value
                         ">
-
                         {% for year in academic_years %}
                         <option
                             value="{{ year.id }}"
@@ -99,9 +82,7 @@ Parent Dashboard
                             {{ year.name }}
                         </option>
                         {% endfor %}
-
                     </select>
-
                 </div>
 
             </div>
@@ -109,7 +90,6 @@ Parent Dashboard
             {% if child %}
 
             <!-- STUDENT PROFILE CARD -->
-
             <div class="glass-card p-3 p-lg-4 mb-3">
 
                 <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 gap-md-4">
@@ -129,39 +109,23 @@ Parent Dashboard
                         </div>
 
                         <div>
-
                             <h5 class="fw-semibold mb-2">
                                 {{ child.first_name }} {{ child.last_name }}
                             </h5>
 
                             <div class="d-flex flex-wrap gap-2">
-
-                                <span class="badge bg-light text-dark p-2">
-                                    🎓 Std {{ std }}
-                                </span>
-
-                                <span class="badge bg-light text-dark p-2">
-                                    📋 Div {{ division }}
-                                </span>
-
+                                <span class="badge bg-light text-dark p-2">🎓 Std {{ std }}</span>
+                                <span class="badge bg-light text-dark p-2">📋 Div {{ division }}</span>
                                 {% if enrollment %}
-                                <span class="badge bg-light text-dark p-2">
-                                    📅 {{ enrollment.academic_year.name }}
-                                </span>
+                                <span class="badge bg-light text-dark p-2">📅 {{ enrollment.academic_year.name }}</span>
                                 {% endif %}
-
-                                <span class="badge bg-light text-dark p-2">
-                                    🎫 Roll No : {{ roll_number }}
-                                </span>
-
+                                <span class="badge bg-light text-dark p-2">🎫 Roll No : {{ roll_number }}</span>
                             </div>
-
                         </div>
 
                     </div>
 
                     <!-- Progress bars -->
-
                     <div class="flex-shrink-0" style="min-width:200px; max-width:260px; width:100%;">
 
                         <div class="mb-3">
@@ -200,250 +164,198 @@ Parent Dashboard
             </div>
 
             <!-- NAVIGATION TABS -->
-
-                        
             <div class="dashboard-tabs mb-3">
 
-                <div class="dashboard-tab active"
-                    onclick="showTab('overview', this)">
+                <div class="dashboard-tab active" data-tab="overview" onclick="HorizonsDash.showTab('overview', this)">
                     Overview
                 </div>
 
-                <div class="dashboard-tab"
-                    onclick="showTab('subjects', this)">
+                <div class="dashboard-tab" data-tab="subjects" onclick="HorizonsDash.showTab('subjects', this)">
                     Subjects
                 </div>
 
-                <div class="dashboard-tab"
-                    onclick="showTab('graphs', this)">
+                <div class="dashboard-tab" data-tab="graphs" onclick="HorizonsDash.showTab('graphs', this)">
                     Graphs
                 </div>
 
-                <div class="dashboard-tab"
-                    onclick="showTab('achievements', this)">
-                    Achievements
-                </div>
+                
 
-                <div class="dashboard-tab"
-                    onclick="showTab('extra-help', this)">
-                    Extra Help
-                </div>
-
+            
             </div>
-            <!-- OVERVIEW SECTION -->
 
-            <div class="glass-card p-3 p-lg-4">
-
-                <h6 class="text-muted text-uppercase fw-semibold mb-3" style="font-size:11px; letter-spacing:0.8px;">
-                    Student Overview
-                </h6>
-
-                <div class="row g-2">
-
-                    <div class="col-6 col-md-4">
-                        <div class="border-start border-3 ps-3 py-1" style="border-color:var(--blue) !important;">
-                            <div class="text-muted small mb-1">Student Name</div>
-                            <div class="fw-semibold small">{{ child.first_name }} {{ child.last_name }}</div>
-                        </div>
-                    </div>
-
-                    <div class="col-6 col-md-4">
-                        <div class="border-start border-3 ps-3 py-1" style="border-color:var(--blue) !important;">
-                            <div class="text-muted small mb-1">Class</div>
-                            <div class="fw-semibold small">{{ std }}</div>
-                        </div>
-                    </div>
-
-                    <div class="col-6 col-md-4">
-                        <div class="border-start border-3 ps-3 py-1" style="border-color:var(--blue) !important;">
-                            <div class="text-muted small mb-1">Division</div>
-                            <div class="fw-semibold small">{{ division }}</div>
-                        </div>
-                    </div>
-
-                    <div class="col-6 col-md-4">
-                        <div class="border-start border-3 ps-3 py-1" style="border-color:var(--blue) !important;">
-                            <div class="text-muted small mb-1">Roll Number</div>
-                            <div class="fw-semibold small">{{ roll_number }}</div>
-                        </div>
-                    </div>
-
-                    <div class="col-6 col-md-4">
-                        <div class="border-start border-3 ps-3 py-1" style="border-color:var(--green) !important;">
-                            <div class="text-muted small mb-1">Average Score</div>
-                            <div class="fw-semibold small">{{ overall_score }}%</div>
-                        </div>
-                    </div>
-
-                    <div class="col-6 col-md-4">
-                        <div class="border-start border-3 ps-3 py-1" style="border-color:var(--green) !important;">
-                            <div class="text-muted small mb-1">Attendance</div>
-                            <div class="fw-semibold small">{{ days_present }}%</div>
-                        </div>
-                    </div>
-
-                </div>
-
-            </div>
+            <!-- TAB CONTENT — rendered by parent.js -->
+            <div id="tab-content" class="tab-fade-in"></div>
 
             {% endif %}
 
-        
-
-            <div id="subjects-tab"
-                class="tab-content"
-                style="display:none;">
-
-                <div class="glass-card p-4">
-
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-
-                        <div>
-
-                            <h5 class="fw-semibold mb-1">
-                                Subject Performance
-                            </h5>
-
-                            <small class="text-muted">
-                                Performance across all subjects
-                            </small>
-
-                        </div>
-
-                    </div>
-
-                    {% for subject in subject_wise_marks %}
-
-                    <div class="subject-row">
-
-                        <div class="subject-info">
-
-                            <div class="fw-semibold">
-                                {{ subject.subject_name }}
-                            </div>
-
-                            <small class="text-muted">
-                                {{ subject.total_obtained }}
-                                /
-                                {{ subject.total_marks }}
-                                Marks
-                            </small>
-
-                        </div>
-
-                        <div class="subject-score">
-
-                            <div class="fw-bold">
-                                {{ subject.percentage }}%
-                            </div>
-
-                            <div class="subject-progress">
-
-                                <div
-                                    class="subject-progress-fill"
-                                    style="width:{{ subject.percentage }}%;">
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    {% empty %}
-
-                    <div class="text-center py-4 text-muted">
-                        No subject data available
-                    </div>
-
-                    {% endfor %}
-
-                </div>
-
-            </div>
-
         </div>
-        <!-- RIGHT SIDEBAR -->
+        <!-- /LEFT COLUMN -->
 
-        
+        <!-- RIGHT SIDEBAR -->
         <div class="col-12 col-lg-3">
             <div class="sticky-lg-top" style="top:16px;">
 
                 <div class="glass-card p-3 mb-3">
-
-                    <h6 class="fw-semibold mb-2">
-                        🚀 What Can I Become?
-                    </h6>
-
+                    <h6 class="fw-semibold mb-2">🚀 What Can I Become?</h6>
                     <p class="small text-muted mb-3">
                         AI career guidance will be integrated later.
                     </p>
-
                     <input
                         type="text"
                         class="form-control form-control-sm mb-2"
                         placeholder="Doctor, Engineer, Artist..."
                     >
-
                     <button class="btn btn-primary-custom w-100 btn-sm">
                         Show Career Options
                     </button>
-
                 </div>
 
                 <div class="glass-card p-3 mb-3">
-
-                    <h6 class="fw-semibold mb-2">
-                        ✨ AI Powered Summary
-                    </h6>
-
+                    <h6 class="fw-semibold mb-2">✨ AI Powered Summary</h6>
                     <p class="text-muted small mb-0">
                         Personalized AI insights will appear here.
                     </p>
-
                 </div>
 
                 <div class="glass-card p-3">
-
-                    <h6 class="fw-semibold mb-2">
-                        👨‍👩‍👧 Parent Details
-                    </h6>
-
+                    <h6 class="fw-semibold mb-2">👨‍👩‍👧 Parent Details</h6>
                     <table class="table table-borderless table-sm mb-0">
-
                         <tr>
                             <td class="text-muted ps-0 small">Father</td>
                             <td class="text-end pe-0 small fw-semibold">{{ father_name }}</td>
                         </tr>
-
                         <tr>
                             <td class="text-muted ps-0 small">Mother</td>
                             <td class="text-end pe-0 small fw-semibold">{{ mother_name }}</td>
                         </tr>
-
                         <tr>
                             <td class="text-muted ps-0 small">Guardian</td>
                             <td class="text-end pe-0 small fw-semibold">{{ guardian }}</td>
                         </tr>
-
                         <tr>
                             <td class="text-muted ps-0 small">Phone</td>
                             <td class="text-end pe-0 small fw-semibold">{{ phone }}</td>
                         </tr>
-
                     </table>
-
                 </div>
 
             </div>
         </div>
+        <!-- /RIGHT SIDEBAR -->
 
     </div>
 
 </div>
-<script
-    src="{% static 'js/parent.js' %}">
+
+<script>
+   window.dashboardData = {
+        child: {
+            first_name: "{% if child %}{{ child.first_name|escapejs }}{% endif %}",
+            last_name:  "{% if child %}{{ child.last_name|escapejs }}{% endif %}"
+        },
+        overall_score:      parseFloat("{{ overall_score|default:'0' }}") || 0,
+        days_present:       parseFloat("{{ days_present|default:'0' }}") || 0,
+        std:                "{{ std|escapejs }}",
+        division:           "{{ division|escapejs }}",
+        roll_number:        "{{ roll_number|escapejs }}",
+
+        achievements:       {{ achievements_json|safe|default:"[]" }},
+        subject_wise_marks: {{ subject_wise_marks_json|safe|default:"[]" }},
+
+        subject_performance_analytics:
+            {{ subject_performance_analytics_json|safe|default:"{}" }},
+
+        library_data:
+            {{ library_data_json|safe|default:"{}" }},
+
+        remedial_data:
+            {{ remedial_data_json|safe|default:"{}" }},
+
+        project_data:
+            {{ project_data_json|safe|default:"{}" }},
+
+        academic_summary:
+            {{ academic_summary_json|safe|default:"{}" }},
+
+        subject_growth_journey:
+            {{ subject_growth_journey_json|safe|default:"{}" }},
+
+        learning_rhythm:
+            {{ learning_rhythm_json|safe|default:"{}" }},
+
+        subject_heatmap:
+            {{ subject_heatmap_json|safe|default:"{}" }},
+
+
+        /*
+         * ── config ────────────────────────────────────────────────────────
+         * All previously-hardcoded thresholds, labels, tips, and categories
+         * are now owned by the backend and injected here.
+         * Your Django view should build a `dashboard_config` dict and pass it
+         * to the template as `dashboard_config_json|safe`.
+         *
+         * Minimal shape the view must produce
+         * (see comments in parent.js for full field documentation):
+         *
+         *  {
+         *    "pass_threshold": 35,
+         *    "attendance_benchmark": 85,
+         *    "extra_help_threshold": 60,
+         *
+         *    "grade_bands": [
+         *      { "min": 90, "label": "A+", "color": "success"  },
+         *      { "min": 80, "label": "A",  "color": "success"  },
+         *      { "min": 70, "label": "B+", "color": "primary"  },
+         *      { "min": 60, "label": "B",  "color": "primary"  },
+         *      { "min": 50, "label": "C",  "color": "warning"  },
+         *      { "min":  0, "label": "F",  "color": "danger"   }
+         *    ],
+         *
+         *    "overall_score_bands": [
+         *      { "min": 75, "summary_message": "Strong overall performance at {score}." },
+         *      { "min": 50, "summary_message": "Overall score is {score} — targeted revision can push this higher." },
+         *      { "min":  0, "summary_message": "Overall score is {score} — needs focused improvement." }
+         *    ],
+         *
+         *    "priority_bands": [
+         *      { "max": 40, "label": "Critical", "badge_class": "bg-danger",             "bg_class": "bg-danger",  "text_class": "text-danger"  },
+         *      { "max": 50, "label": "High",     "badge_class": "bg-warning text-dark",  "bg_class": "bg-warning", "text_class": "text-warning" },
+         *      { "max": 60, "label": "Medium",   "badge_class": "bg-info text-dark",     "bg_class": "bg-info",    "text_class": "text-info"    }
+         *    ],
+         *
+         *    "achievement_categories": [
+         *      { "key": "academic", "label": "Academic", "icon": "🎓" },
+         *      { "key": "sports",   "label": "Sports",   "icon": "⚽" },
+         *      { "key": "arts",     "label": "Arts",     "icon": "🎨" }
+         *    ],
+         *
+         *    "improvement_tips": [
+         *      "Schedule 30-minute daily revision sessions.",
+         *      "Use past exam papers for practice.",
+         *      "Ask the subject teacher for extra guidance."
+         *    ],
+         *
+         *    "parent_action_tips": [
+         *      { "icon": "📞", "action": "Schedule a meeting with the class teacher." },
+         *      { "icon": "📖", "action": "Ensure 1 hour of dedicated study time daily." },
+         *      { "icon": "📝", "action": "Review completed homework regularly." },
+         *      { "icon": "💬", "action": "Encourage open communication about learning challenges." },
+         *      { "icon": "🧑‍💻", "action": "Consider online resources or tutoring for weak subjects." }
+         *    ],
+         *
+         *    "subject_action_tips": [
+         *      "Identify specific chapters causing difficulty.",
+         *      "Practice past papers under timed conditions.",
+         *      "Request additional worksheets from subject teacher."
+         *    ]
+         *  }
+         * ──────────────────────────────────────────────────────────────── */
+        config: {{ dashboard_config_json|safe|default:"{}" }}
+    };
 </script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="{% static 'js/parent.js' %}"></script>
 
 </body>
 {% endblock %}

@@ -1062,7 +1062,8 @@ class Command(BaseCommand):
                 department_id,
                 teacher_id,
                 role,
-                academic_yr
+                academic_yr,
+                school_id
             FROM department_special_role
         """
 
@@ -1074,6 +1075,7 @@ class Command(BaseCommand):
                 school=school_obj
             )
         }
+
         user_map = {
 
             user.reg_id: user
@@ -1084,6 +1086,9 @@ class Command(BaseCommand):
 
             if user.reg_id
         }
+
+        school_instance = school_obj
+      
 
         for chunk in self.fetch_in_chunks(query):
 
@@ -1098,21 +1103,29 @@ class Command(BaseCommand):
                     teacher_obj = user_map.get(
                         row["teacher_id"]
                     )
+                    school_instance = school_obj
+                    if (
 
-                    if not department_obj or not teacher_obj:
+                        not department_obj
+                        or not teacher_obj
+                    ):
                         continue
 
-                    DepartmentSpecialRole.objects.update_or_create(
+                    obj, created = (
+                        DepartmentSpecialRole.objects
+                        .update_or_create(
 
-                        department=department_obj,
-                        teacher=teacher_obj,
-                        role=row["role"],
+                            school=school_instance,
+                            department=department_obj,
+                            teacher=teacher_obj,
+                            role=row["role"],
 
-                        defaults={
-                            "academic_yr": row[
-                                "academic_yr"
-                            ]
-                        }
+                            defaults={
+                                "academic_yr": row[
+                                    "academic_yr"
+                                ]
+                            }
+                        )
                     )
 
                     self.log_sync(
@@ -1122,8 +1135,12 @@ class Command(BaseCommand):
                             "special_role_id"
                         ],
                         target_table="department_special_role",
-                        target_primary_id=0,
-                        action="INSERT",
+                        target_primary_id=obj.id,
+                        action=(
+                            "INSERT"
+                            if created
+                            else "UPDATE"
+                        ),
                         status="SUCCESS"
                     )
 
@@ -1133,7 +1150,8 @@ class Command(BaseCommand):
                         school=school_obj,
                         source_table="department_special_role",
                         source_primary_id=row.get(
-                            "special_role_id", ""
+                            "special_role_id",
+                            ""
                         ),
                         target_table="department_special_role",
                         target_primary_id=0,
@@ -2864,6 +2882,7 @@ class Command(BaseCommand):
                 s.class_ref_id,
                 s.division_id,
                 s.subject_id,
+                s.academic_year_id,
                 s.date
             ):s
 
@@ -2920,6 +2939,8 @@ class Command(BaseCommand):
                     division_obj.id if division_obj else None,
 
                     subject_obj.id if subject_obj else None,
+
+                    academic_year_obj.id if academic_year_obj else None,
 
                     row["only_date"]
                 )

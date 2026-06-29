@@ -1,15 +1,24 @@
 
 from django.shortcuts import render, redirect
 from collections import OrderedDict
-
+from collections import Counter
+import json
+from .analytics import (
+    get_subject_performance_analytics,
+    get_subject_growth_analytics,
+   
+)
 from app.models import (
-    User,
+    User,   
     Parent,
     Student,
     AcademicYear,
     StudentEnrollment,
     StudentYearSummary,
     Mark,
+    StudentAchievement, 
+    Project,
+    BookIssue,RemedialSession,
 )
 
 
@@ -216,7 +225,8 @@ def get_student_year_summary(
         return None
 
     return StudentYearSummary.objects.filter(
-        student_enrollment=enrollment
+        student_enrollment=enrollment,
+        school=enrollment.school
     ).first()
 
 
@@ -227,7 +237,7 @@ def get_subject_wise_marks(enrollment):
 
     subjects = OrderedDict()
 
-    marks = Mark.objects.filter(student_enrollment=enrollment).select_related(
+    marks = Mark.objects.filter(student_enrollment=enrollment, school=enrollment.school).select_related(
         "exam_subject__exam",
         "exam_subject__subject__subject_master",
         "exam_type"
@@ -293,8 +303,778 @@ def get_subject_wise_marks(enrollment):
 
     return result
 
+def get_class_enrollments(enrollment):
 
-def parent_dashboard(request):
+    if not enrollment:
+        return StudentEnrollment.objects.none()
+
+    return StudentEnrollment.objects.filter(
+        division=enrollment.division,
+        academic_year=enrollment.academic_year,
+        school=enrollment.school
+    ).exclude(
+        id=enrollment.id
+    )
+
+def get_achievements(student, school):
+
+    achievements = []
+
+    student_achievements = (
+        StudentAchievement.objects
+        .filter(
+            student=student,
+            school=school
+        )
+        .order_by("-date")
+    )
+
+    for achievement in student_achievements:
+
+        achievements.append({
+            "title": achievement.title,
+            "category": achievement.type,
+            "date": (
+                achievement.date.strftime("%d %b %Y")
+                if achievement.date else ""
+            ),
+            "description": achievement.description,
+            "awarded_by": "School"
+        })
+    return achievements
+
+
+
+
+def get_remedial_data(enrollment):
+
+    if not enrollment:
+        return {
+            "is_remedial": False,
+            "session_count": 0,
+            "subjects": [],
+            "primary_remedial_subject": None,
+            "primary_remedial_sessions": 0,
+            "latest_note": ""
+        }
+
+    sessions = (
+        RemedialSession.objects
+        .filter(
+            student_enrollment=enrollment,
+            school=enrollment.school
+        )
+        .select_related(
+            "subject__subject_master"
+        )
+        .order_by("-session_date")
+    )
+
+    if not sessions.exists():
+        return {
+            "is_remedial": False,
+            "session_count": 0,
+            "subjects": [],
+            "primary_remedial_subject": None,
+            "primary_remedial_sessions": 0,
+            "latest_note": ""
+        }
+
+    subject_counter = Counter()
+
+    for session in sessions:
+
+        if (
+            session.subject
+            and session.subject.subject_master
+        ):
+            subject_name = (
+                session.subject
+                .subject_master
+                .name
+            )
+
+            subject_counter[
+                subject_name
+            ] += 1
+
+    subject_summary = []
+
+    for subject_name, count in subject_counter.items():
+
+        subject_summary.append({
+            "subject": subject_name,
+            "sessions": count
+        })
+
+    primary_subject = None
+    primary_sessions = 0
+
+    if subject_counter:
+
+        primary_subject, primary_sessions = (
+            subject_counter.most_common(1)[0]
+        )
+
+    latest_session = sessions.first()
+
+    return {
+
+        "is_remedial": True,
+
+        "session_count": sessions.count(),
+
+        "subjects": subject_summary,
+
+        "primary_remedial_subject":
+            primary_subject,
+
+        "primary_remedial_sessions":
+            primary_sessions,
+
+        "latest_note":
+            latest_session.notes or ""
+    }
+
+
+def get_library_data(student, school):
+
+    issues = (
+        BookIssue.objects
+        .filter(
+            student=student,
+            school=school
+        )
+        .select_related("book")
+        .order_by("-issue_date")
+    )
+
+    total_books = issues.count()
+
+    active_books = 0
+    book_types = []
+    recent_books = []
+
+    for issue in issues:
+
+        if issue.return_date is None:
+            active_books += 1
+
+        if issue.book and issue.book.type:
+            book_types.append(
+                issue.book.type
+            )
+
+        if (
+            issue.book and
+            len(recent_books) < 3
+        ):
+            recent_books.append(
+                issue.book.title
+            )
+
+    favorite_type = None
+
+    if book_types:
+        favorite_type = (
+            Counter(book_types)
+            .most_common(1)[0][0]
+        )
+
+    return {
+
+        "is_reader":
+            total_books > 0,
+
+        "total_books":
+            total_books,
+
+        "active_books":
+            active_books,
+
+        "favorite_type":
+            favorite_type,
+
+        "recent_books":
+            recent_books,
+
+        "suggestion":
+            None if total_books > 0
+            else (
+                "Encourage regular reading and library participation "
+                "to support learning beyond the classroom."
+            )
+    }
+
+def get_project_data(student, school):
+
+    projects = (
+        Project.objects
+        .filter(
+            student=student,
+            school=school
+        )
+        .order_by("-date")
+    )
+
+    return {
+        "has_projects": projects.exists(),
+        "project_count": projects.count(),
+        "projects": [
+            {
+                "title": project.title,
+                "description": project.description,
+                "type": project.type,
+                "date": (
+                    project.date.strftime("%d %b %Y")
+                    if project.date else ""
+                )
+            }
+            for project in projects
+        ]
+    }
+
+def get_academic_summary(
+    subject_wise_marks,
+    remedial_data
+):
+
+    def get_subject_status(score):
+
+        if score >= 85:
+            return "Excellent"
+        if score >= 70:
+            return "Strong"
+        if score >= 60:
+            return "Good"
+        if score >= 50:
+            return "Needs Attention"
+
+        return "Critical"
+
+    if not subject_wise_marks:
+
+        return {
+            "top_subject": None,
+            "weak_subject": None,
+            "attention_area": None,
+            "top_3_subjects": [],
+            "bottom_3_subjects": [],
+            "remedial_status": False,
+            "remedial_subject": None,
+            "remedial_sessions": 0
+        }
+
+    sorted_subjects = sorted(
+        subject_wise_marks,
+        key=lambda x: x["percentage"],
+        reverse=True
+    )
+
+    top_subject = sorted_subjects[0]
+    weak_subject = sorted_subjects[-1]
+
+    top_3_subjects = [
+        {
+            "subject": subject["subject_name"],
+            "percentage": subject["percentage"],
+            "status": get_subject_status(
+                subject["percentage"]
+            )
+        }
+        for subject in sorted_subjects[:3]
+    ]
+
+    bottom_3_subjects = [
+        {
+            "subject": subject["subject_name"],
+            "percentage": subject["percentage"],
+            "status": get_subject_status(
+                subject["percentage"]
+            )
+        }
+        for subject in reversed(
+            sorted_subjects[-3:]
+        )
+    ]
+
+    attention_area = (
+        weak_subject["subject_name"]
+        if weak_subject["percentage"] < 60
+        else None
+    )
+
+    return {
+        "top_subject": {
+            "name": top_subject["subject_name"],
+            "percentage": top_subject["percentage"]
+        },
+        "weak_subject": {
+            "name": weak_subject["subject_name"],
+            "percentage": weak_subject["percentage"]
+        },
+        "top_3_subjects": top_3_subjects,
+        "bottom_3_subjects": bottom_3_subjects,
+        "attention_area": attention_area,
+        "remedial_status": remedial_data["is_remedial"],
+        "remedial_subject": remedial_data["primary_remedial_subject"],
+        "remedial_sessions": remedial_data["primary_remedial_sessions"]
+    }
+
+def get_student_five_year_data(
+    student,
+    selected_year_id
+):
+
+    if not student:
+        return []
+
+    current_year = AcademicYear.objects.filter(
+        id=selected_year_id
+    ).first()
+
+    if not current_year:
+        return []
+
+    years = (
+        AcademicYear.objects
+        .filter(
+            start_date__lte=current_year.start_date
+        )
+        .order_by("-start_date")[:5]
+    )
+
+    student_ids = (
+        Student.objects
+        .filter(
+            parent=student.parent,
+            school=student.school,
+            first_name=student.first_name,
+            last_name=student.last_name
+        )
+        .values_list(
+            "id",
+            flat=True
+        )
+    )
+
+    enrollments = (
+        StudentEnrollment.objects
+        .filter(
+            student_id__in=student_ids,
+            academic_year__in=years,
+            school=student.school
+        )
+        .select_related(
+            "academic_year"
+        )
+        .order_by(
+            "academic_year__start_date"
+        )
+    )
+
+    result = []
+
+    for enrollment in enrollments:
+
+        marks = (
+            Mark.objects
+            .filter(
+                student_enrollment=enrollment
+            )
+            .select_related(
+                "exam_subject__subject__subject_master"
+            )
+        )
+
+        subjects = {}
+
+        for mark in marks:
+
+            subject_name = (
+                mark.exam_subject
+                .subject
+                .subject_master
+                .name
+            )
+
+            if subject_name not in subjects:
+
+                subjects[subject_name] = {
+                    "obtained": 0,
+                    "total": 0
+                }
+
+            subjects[subject_name]["obtained"] += float(
+                mark.obtained_marks or 0
+            )
+
+            subjects[subject_name]["total"] += float(
+                mark.total_marks or 0
+            )
+
+        subject_scores = []
+
+        for subject_name, values in subjects.items():
+
+            percentage = 0
+
+            if values["total"] > 0:
+
+                percentage = round(
+                    (
+                        values["obtained"]
+                        / values["total"]
+                    ) * 100,
+                    2
+                )
+
+            subject_scores.append({
+                "subject": subject_name,
+                "percentage": percentage
+            })
+
+        result.append({
+            "academic_year":
+                enrollment.academic_year.name,
+
+            "student_id":
+                enrollment.student_id,
+
+            "enrollment_id":
+                enrollment.id,
+
+            "subjects":
+                subject_scores
+        })
+
+    return result
+
+
+def get_subject_heatmap_data(five_year_data):
+
+    years = []
+    subjects = set()
+    values = []
+
+    for year_index, year in enumerate(five_year_data):
+
+        years.append(year["academic_year"])
+
+        for subject_data in year["subjects"]:
+
+            subjects.add(
+                subject_data["subject"]
+            )
+
+    subjects = sorted(list(subjects))
+
+    for year_index, year in enumerate(five_year_data):
+
+        for subject_data in year["subjects"]:
+
+            values.append({
+                "x": year["academic_year"],
+                "y": subject_data["subject"],
+                "v": subject_data["percentage"]
+            })
+
+    return {
+        "years": years,
+        "subjects": subjects,
+        "values": values
+    }
+
+
+
+def get_subject_growth_journey(student, selected_year_id):
+
+    result = {
+        "subjects": [],
+        "top_performer": None,
+        "top_improving_subject": None,
+        "top_declining_subject": None,
+        "most_consistent_subject": None,
+        "best_retained_subject": None,
+        "weak_subject": None,
+        "improved_subject_count": 0,
+        "stable_subject_count": 0,
+        "declining_subject_count": 0,
+        "growth_summary": ""
+    }
+
+    five_year_data = get_student_five_year_data(
+        student,
+        selected_year_id,
+        
+    )
+
+    if not five_year_data:
+        return result
+
+    subject_history = {}
+
+    for year_data in five_year_data:
+        for subject in year_data["subjects"]:
+
+            subject_name = subject["subject"]
+
+            if subject_name not in subject_history:
+                subject_history[subject_name] = []
+
+            subject_history[subject_name].append(
+                subject["percentage"]
+            )
+
+    for subject_name, scores in subject_history.items():
+
+        current_score = scores[-1]
+        first_score = scores[0]
+
+        growth = round(
+            current_score - first_score,
+            2
+        )
+
+        score_range = round(
+            max(scores) - min(scores),
+            2
+        )
+
+        years_present = len(scores)
+
+        if growth >= 5:
+            trend = "Strong Growth"
+        elif growth > 0:
+            trend = "Improving"
+        elif growth >= -5:
+            trend = "Stable"
+        else:
+            trend = "Declining"
+
+        if current_score >= 85:
+            performance_band = "Excellent"
+        elif current_score >= 70:
+            performance_band = "Strong"
+        elif current_score >= 60:
+            performance_band = "Good"
+        else:
+            performance_band = "Needs Attention"
+
+        result["subjects"].append({
+            "subject": subject_name,
+            "current_score": current_score,
+            "first_score": first_score,
+            "five_year_growth": growth,
+            "history": scores,
+            "years_present": years_present,
+            "score_range": score_range,
+            "trend": trend,
+            "performance_band": performance_band
+        })
+
+    if not result["subjects"]:
+        return result
+
+    result["top_performer"] = max(
+        result["subjects"],
+        key=lambda x: x["current_score"]
+    )
+
+    result["weak_subject"] = min(
+        result["subjects"],
+        key=lambda x: x["current_score"]
+    )
+
+    result["most_consistent_subject"] = min(
+        result["subjects"],
+        key=lambda x: x["score_range"]
+    )
+
+    positive_subjects = [
+        s for s in result["subjects"]
+        if s["five_year_growth"] > 0
+    ]
+
+    declining_subjects = [
+        s for s in result["subjects"]
+        if s["five_year_growth"] < -5
+    ]
+
+    stable_subjects = [
+        s for s in result["subjects"]
+        if -5 <= s["five_year_growth"] <= 5
+    ]
+
+    result["improved_subject_count"] = len(positive_subjects)
+    result["stable_subject_count"] = len(stable_subjects)
+    result["declining_subject_count"] = len(declining_subjects)
+
+    if declining_subjects:
+        result["top_declining_subject"] = min(
+            declining_subjects,
+            key=lambda x: x["five_year_growth"]
+        )
+
+    if positive_subjects:
+
+        result["top_improving_subject"] = max(
+            positive_subjects,
+            key=lambda x: x["five_year_growth"]
+        )
+
+        result["best_retained_subject"] = result[
+            "most_consistent_subject"
+        ]
+
+        result["growth_summary"] = (
+            f"{result['top_improving_subject']['subject']} "
+            f"shows the strongest long-term improvement with a "
+            f"growth of {result['top_improving_subject']['five_year_growth']} "
+            f"percentage points. "
+            f"{result['top_performer']['subject']} remains the "
+            f"highest performing subject currently."
+        )
+
+    else:
+
+        result["top_improving_subject"] = result[
+            "top_performer"
+        ]
+
+        result["best_retained_subject"] = result[
+            "most_consistent_subject"
+        ]
+
+        result["growth_summary"] = (
+            f"No subject has shown overall positive growth across "
+            f"the selected academic period. "
+            f"{result['top_performer']['subject']} remains the "
+            f"strongest performing subject with "
+            f"{result['top_performer']['current_score']}%. "
+            f"{result['most_consistent_subject']['subject']} has "
+            f"shown the most stable performance over the years."
+        )
+
+    return result
+
+
+
+
+
+def get_learning_rhythm(library_data, subject_growth_journey, remedial_data, project_data):
+
+    strengths = []
+    concerns = []
+
+    if library_data["is_reader"]:
+
+        strengths.append({
+            "type": "reading",
+            "books_read": library_data["total_books"],
+            "favorite_type": library_data["favorite_type"]
+        })
+
+    top_growth = (
+        subject_growth_journey.get(
+            "top_improving_subject"
+        )
+    )
+
+    if top_growth:
+
+        strengths.append({
+            "type": "academic_growth",
+            "subject": top_growth["subject"],
+            "growth": top_growth["five_year_growth"]
+        })
+
+    if project_data["project_count"] > 0:
+
+        strengths.append({
+            "type": "projects",
+            "count": project_data["project_count"]
+        })
+
+    weak_subject = (
+        subject_growth_journey.get(
+            "weak_subject"
+        )
+    )
+
+    if weak_subject:
+
+        concerns.append({
+            "type": "weak_subject",
+            "subject": weak_subject["subject"],
+            "score": weak_subject["current_score"]
+        })
+
+    declining_subject = (
+        subject_growth_journey.get(
+            "top_declining_subject"
+        )
+    )
+
+    if declining_subject:
+
+        concerns.append({
+            "type": "declining_subject",
+            "subject": declining_subject["subject"],
+            "decline": abs(
+                declining_subject["five_year_growth"]
+            )
+        })
+
+    if remedial_data["is_remedial"]:
+
+        concerns.append({
+            "type": "remedial",
+            "subject": remedial_data[
+                "primary_remedial_subject"
+            ],
+            "sessions": remedial_data[
+                "primary_remedial_sessions"
+            ]
+        })
+
+    return {
+
+        "reading_profile": {
+            "is_reader":
+                library_data["is_reader"],
+
+            "books_read":
+                library_data["total_books"],
+
+            "active_books":
+                library_data["active_books"],
+
+            "favorite_type":
+                library_data["favorite_type"]
+        },
+
+        "project_engagement": {
+            "project_count":
+                project_data["project_count"],
+
+            "has_projects":
+                project_data["has_projects"]
+        },
+
+        "strengths":
+            strengths,
+
+        "concerns":
+            concerns
+    }
+
+
+
+
+
+
+def parent_dashboard(request): 
 
     user = get_logged_in_user(
         request
@@ -369,10 +1149,138 @@ def parent_dashboard(request):
     summary = get_student_year_summary(
         enrollment
     )
-
+    
     subject_wise_marks = get_subject_wise_marks(
         enrollment
     )
+
+    subject_wise_marks_json = json.dumps(
+        subject_wise_marks
+    )
+
+    subject_performance_analytics = (
+        get_subject_performance_analytics(
+            subject_wise_marks
+        )
+    )
+
+    subject_performance_analytics_json = json.dumps(
+        subject_performance_analytics
+    )
+
+    subject_growth_analytics = (
+        get_subject_growth_analytics(
+            subject_wise_marks
+        )
+    )
+
+    subject_growth_analytics_json = json.dumps(
+        subject_growth_analytics
+    )
+
+
+
+
+
+
+    achievements = get_achievements(
+        child,
+        user.school
+    )
+
+    achievements_json = json.dumps(
+        achievements
+    )
+
+    library_data = get_library_data(
+        child,
+        user.school
+    )
+
+    library_data_json = json.dumps(
+        library_data
+    )
+
+
+    remedial_data = get_remedial_data(
+        enrollment
+    )
+
+    remedial_data_json = json.dumps(
+        remedial_data
+    )
+
+    project_data = get_project_data(
+        child,
+        user.school
+    )
+
+    project_data_json = json.dumps(
+        project_data
+    )
+
+    academic_summary = (
+        get_academic_summary(
+            subject_wise_marks,
+            remedial_data
+        )
+    )
+
+    academic_summary_json = json.dumps(
+        academic_summary
+    )
+
+
+    subject_growth_journey = (
+        get_subject_growth_journey(
+            child,
+            selected_year_id
+        )
+    )
+
+    subject_growth_journey_json = json.dumps(
+        subject_growth_journey
+    )
+
+
+    learning_rhythm = (
+        get_learning_rhythm(
+            library_data,
+            subject_growth_journey,
+            remedial_data,
+            project_data
+        )
+    )
+
+    learning_rhythm_json = json.dumps(
+        learning_rhythm
+    )
+
+    five_year_data = get_student_five_year_data(
+        child,
+        selected_year_id
+    )
+
+    five_year_data_json = json.dumps(
+        five_year_data
+    )
+
+    subject_heatmap = (
+        get_subject_heatmap_data(
+            five_year_data
+        )
+    )
+
+    subject_heatmap_json = json.dumps(
+        subject_heatmap
+    )
+
+    print("\n========== FIVE YEAR DATA ==========")
+    print(json.dumps(
+        five_year_data,
+        indent=4
+    ))
+    print("===================================\n")
 
     return render(
         request,
@@ -407,6 +1315,75 @@ def parent_dashboard(request):
 
             "subject_wise_marks":
             subject_wise_marks,
+
+            "subject_wise_marks_json": 
+            subject_wise_marks_json,
+
+            "subject_performance_analytics": 
+            subject_performance_analytics,
+
+            "subject_performance_analytics_json": 
+            subject_performance_analytics_json,
+
+            "subject_growth_analytics":
+            subject_growth_analytics,
+
+            "subject_growth_analytics_json":
+            subject_growth_analytics_json,
+
+            "achievements":
+            achievements,
+
+            "achievements_json":
+            achievements_json,
+
+            "library_data":
+            library_data,
+
+            "library_data_json":
+            library_data_json,
+
+            "remedial_data":
+            remedial_data,
+
+            "remedial_data_json":
+            remedial_data_json,
+
+            "project_data":
+            project_data,
+
+            "project_data_json":
+            project_data_json,
+
+            "academic_summary":
+            academic_summary,
+
+            "academic_summary_json":
+            academic_summary_json,
+
+            "subject_growth_journey":
+            subject_growth_journey,
+
+            "subject_growth_journey_json":
+            subject_growth_journey_json,
+
+            "learning_rhythm":
+            learning_rhythm,
+
+            "learning_rhythm_json":
+            learning_rhythm_json,
+
+            "five_year_data":
+            five_year_data,
+
+            "five_year_data_json":
+            five_year_data_json,
+
+            "subject_heatmap":
+            subject_heatmap,
+
+            "subject_heatmap_json":
+            subject_heatmap_json,
 
             "std":
             (

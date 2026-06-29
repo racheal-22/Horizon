@@ -93,39 +93,51 @@ class Command(BaseCommand):
     # STUDENT BEHAVIOUR ANALYSIS
     # =====================================
 
-    def generate_behavior_analysis(self):
+    def generate_behavior_analysis(
+        self,
+        school_obj
+    ):
 
-        StudentBehaviorAnalysis.objects.all().delete()
+        StudentBehaviorAnalysis.objects.filter(
+            school=school_obj
+        ).delete()
 
         enrollments = StudentEnrollment.objects.select_related(
             "student",
             "academic_year"
+        ).filter(
+            school=school_obj
         )
 
         for enrollment in enrollments:
 
             attendance = StudentAttendance.objects.filter(
+                school=school_obj,
                 student_enrollment=enrollment
             ).aggregate(
                 avg=Avg("attendance_percentage")
             )["avg"] or 0
 
             homework_on_time = HomeworkSubmission.objects.filter(
+                school=school_obj,
                 student_enrollment=enrollment,
                 status="Submitted"
             ).count()
 
             assignments_pending = HomeworkSubmission.objects.filter(
+                school=school_obj,
                 student_enrollment=enrollment,
                 status="Pending"
             ).count()
 
             books_returned = BookIssue.objects.filter(
+                school=school_obj,
                 student=enrollment.student,
                 status="Returned"
             ).count()
 
             parent_feedback_avg = ParentFeedback.objects.filter(
+                school=school_obj,
                 student=enrollment.student,
                 academic_year=enrollment.academic_year
             ).aggregate(
@@ -161,6 +173,8 @@ class Command(BaseCommand):
 
             StudentBehaviorAnalysis.objects.create(
 
+                school=school_obj,
+
                 student_enrollment=enrollment,
 
                 academic_year=enrollment.academic_year,
@@ -178,9 +192,7 @@ class Command(BaseCommand):
 
                 homework_on_time=homework_on_time,
 
-                assignments_on_time=(
-                    homework_on_time
-                ),
+                assignments_on_time=homework_on_time,
 
                 attendance_percentage=round(
                     attendance,

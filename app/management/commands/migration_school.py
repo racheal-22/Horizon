@@ -1065,7 +1065,7 @@ class Command(BaseCommand):
                 academic_yr
             FROM department_special_role
         """
-
+#removed the school id 
         department_map = {
 
             dept.source_department_id: dept

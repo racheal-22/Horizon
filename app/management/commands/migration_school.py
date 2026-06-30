@@ -1062,8 +1062,7 @@ class Command(BaseCommand):
                 department_id,
                 teacher_id,
                 role,
-                academic_yr,
-                school_id
+                academic_yr
             FROM department_special_role
         """
 

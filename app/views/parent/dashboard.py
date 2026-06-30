@@ -20,7 +20,7 @@ from app.models import (
     Project,
     BookIssue,RemedialSession,
 )
-from .ai import build_career_context
+#from .ai import build_career_context
 
 def get_logged_in_user(request):
 
@@ -1275,20 +1275,7 @@ def parent_dashboard(request):
         subject_heatmap
     )
 
-    career_context = build_career_context(
-        child=child,
-        summary=summary,
-        academic_summary=academic_summary,
-        subject_growth_journey=subject_growth_journey,
-        learning_rhythm=learning_rhythm,
-        library_data=library_data,
-        project_data=project_data,
-        achievements=achievements,
-        remedial_data=remedial_data,
-        subject_wise_marks=subject_wise_marks,
-        five_year_data=five_year_data,
-        subject_heatmap=subject_heatmap,
-    )
+
 
     print("\n========== FIVE YEAR DATA ==========")
     print(json.dumps(
@@ -1296,7 +1283,7 @@ def parent_dashboard(request):
         indent=4
     ))
     print("===================================\n")
-    print(career_context)
+    
 
     return render(
         request,

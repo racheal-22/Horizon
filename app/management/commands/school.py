@@ -1,5 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db import connections
+from django.utils import timezone
+import json
 
 from app.models import (
     AttendanceSession,
@@ -17,43 +19,98 @@ from app.models import (
 )
 
 
-
 class Command(BaseCommand):
 
-    help = "Library Sync"
+    help = "Resume school sync from SUBJECT MASTER (step 11) onward. Skips school/dept/class/division/parents/users/teachers/students/enrollments which are assumed already synced."
 
     BATCH_SIZE = 1000
 
     # ==========================================
-    # FETCH MYSQL DATA
+    # COMMON LOGGER
     # ==========================================
 
-    def fetch_in_chunks(self, query):
+    def log_sync(
+        self,
+        school,
+        source_table,
+        source_primary_id,
+        target_table,
+        target_primary_id,
+        action,
+        status,
+        error_message=""
+    ):
 
-        connection = connections["mysql"]
+        if school:
 
-        cursor = connection.cursor()
-
-        cursor.execute(query)
-
-        columns = [col[0] for col in cursor.description]
-
-        while True:
-
-            rows = cursor.fetchmany(
-                self.BATCH_SIZE
+            SyncTracker.objects.create(
+                school=school,
+                source_table=source_table,
+                source_primary_id=str(source_primary_id),
+                target_table=target_table,
+                target_primary_id=target_primary_id,
+                sync_action=action,
+                sync_status=status,
+                synced_at=timezone.now(),
+                error_message=error_message
             )
 
-            if not rows:
-                break
+    # ==========================================
+    # FETCH MYSQL DATA IN CHUNKS (with reconnect on dropped connection)
+    # ==========================================
 
-            yield [
-                dict(zip(columns, row))
-                for row in rows
-            ]
+    def fetch_in_chunks(self, query, retries=3):
 
-        cursor.close()
+        from django.db.utils import OperationalError
+        import time
 
+        for attempt in range(retries):
+
+            try:
+
+                connection = connections["mysql"]
+
+                connection.close_if_unusable_or_obsolete()
+
+                with connection.cursor() as cursor:
+
+                    cursor.execute(query)
+
+                    columns = [col[0] for col in cursor.description]
+
+                    while True:
+
+                        rows = cursor.fetchmany(self.BATCH_SIZE)
+
+                        if not rows:
+                            break
+
+                        yield [
+                            dict(zip(columns, row))
+                            for row in rows
+                        ]
+
+                return
+
+            except OperationalError as e:
+
+                if "2013" in str(e) and attempt < retries - 1:
+
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"MySQL connection lost, reconnecting... (attempt {attempt+1})"
+                        )
+                    )
+
+                    connections["mysql"].close()
+                    time.sleep(2)
+                    continue
+
+                raise
+
+    # ==========================================
+    # SUBJECT MASTER
+    # ==========================================
 
     def sync_subject_master(self,school_obj):
 
@@ -133,14 +190,14 @@ class Command(BaseCommand):
                 SubjectMaster.objects.bulk_update(
                     subjects_to_update,
                     [
-                        
+
                         "name",
                         "subject_type"
                     ],
                     batch_size=self.BATCH_SIZE
                 )
 
-            
+
 
     def sync_subjects(self,school_obj):
 
@@ -319,7 +376,7 @@ class Command(BaseCommand):
                 Subject.objects.bulk_update(
                     subjects_to_update,
                     [
-                        
+
                         "subject_master",
                         "class_ref",
                         "division",
@@ -408,8 +465,6 @@ class Command(BaseCommand):
                         report_card_obj
                     )
 
-                    # Prevent duplicate inserts in same run
-
                     existing_report_cards[
                         row["sub_rc_master_id"]
                     ] = True
@@ -433,7 +488,7 @@ class Command(BaseCommand):
                     ],
                     batch_size=self.BATCH_SIZE
                 )
-    
+
 
     def sync_subject_report_cards(self,school_obj):
 
@@ -759,8 +814,8 @@ class Command(BaseCommand):
                     ],
                     batch_size=self.BATCH_SIZE
                 )
-        
-        
+
+
     def sync_exam_subjects(self, school_obj):
 
         query = """
@@ -1073,7 +1128,7 @@ class Command(BaseCommand):
 
                     continue
 
-                  
+
 
                 for (
                     marks_heading_id,
@@ -1197,9 +1252,6 @@ class Command(BaseCommand):
                 "Marks sync completed"
             )
         )
-
-
-
 
 
     def sync_attendance_sessions(self, school_obj):
@@ -1387,7 +1439,6 @@ class Command(BaseCommand):
                 "Attendance sessions sync completed"
             )
         )
-
 
 
     def sync_student_attendance(self,school_obj):
@@ -1633,9 +1684,8 @@ class Command(BaseCommand):
         )
 
 
-
     def sync_teacher_attendance(self,school_obj):
-       
+
 
         query="""
             SELECT
@@ -1884,8 +1934,9 @@ class Command(BaseCommand):
                 "Teacher attendance sync completed"
             )
         )
+
     # ==========================================
-    # MAIN HANDLER
+    # MAIN HANDLER (RESUME FROM STEP 11)
     # ==========================================
     def handle(self, *args, **kwargs):
 
@@ -1895,52 +1946,29 @@ class Command(BaseCommand):
 
             self.stdout.write(
                 self.style.WARNING(
-                    "Starting school sync..."
+                    "Resuming school sync from SUBJECT MASTER (step 11)..."
                 )
             )
 
-            print("1. SCHOOL")
-            school_obj = self.sync_school_data()
+            # NOTE: assumes only one School row exists.
+            # If you have multiple schools, change this to:
+            # school_obj = School.objects.get(short_name="YOUR_SHORT_NAME")
+            school_obj = School.objects.first()
 
             if not school_obj:
 
                 self.stdout.write(
                     self.style.ERROR(
-                        "School sync failed"
+                        "No School found in DB — run the full migration_school command first."
                     )
                 )
 
                 return
 
-            print("2. DEPARTMENTS")
-            self.sync_departments(school_obj)
-
-            print("3. CLASSES")
-            self.sync_classes(school_obj)
-
-            print("4. DIVISIONS")
-            self.sync_divisions(school_obj)
-
-            print("5. PARENTS")
-            self.sync_parents(school_obj)
-
-            print("6. USERS")
-            self.sync_users(school_obj)
-
-            print("7. TEACHERS")
-            self.sync_teachers(school_obj)
-
-            print("8. DEPARTMENT SPECIAL ROLES")
-            self.sync_department_special_roles(
-                school_obj
-            )
-
-            print("9. STUDENTS")
-            self.sync_students(school_obj)
-
-            print("10. STUDENT ENROLLMENTS")
-            self.sync_student_enrollments(
-                school_obj
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Using existing school: {school_obj.name} ({school_obj.short_name})"
+                )
             )
 
             print("11. SUBJECT MASTER")
@@ -2000,7 +2028,7 @@ class Command(BaseCommand):
 
             self.stdout.write(
                 self.style.SUCCESS(
-                    "Sync completed successfully"
+                    "Resume sync completed successfully"
                 )
             )
 
@@ -2009,8 +2037,3 @@ class Command(BaseCommand):
             traceback.print_exc()
 
             raise
-
-
-
-    
-

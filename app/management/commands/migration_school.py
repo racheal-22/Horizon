@@ -1762,6 +1762,8 @@ class Command(BaseCommand):
                     batch_size=self.BATCH_SIZE
                 )
 
+            
+
     def sync_subjects(self,school_obj):
 
         query="""
@@ -1829,6 +1831,19 @@ class Command(BaseCommand):
                 subject_master_obj=subject_master_map.get(
                     row["sm_id"]
                 )
+
+                if subject_master_obj is None:
+                    self.log_sync(
+                        school=school_obj,
+                        source_table="subject",
+                        source_primary_id=row["subject_id"],
+                        target_table="subject",
+                        target_primary_id=0,
+                        action="INSERT",
+                        status="FAILED",
+                        error_message=f"SubjectMaster not found for sm_id={row['sm_id']}"
+                    )
+                    continue
 
                 class_obj=class_map.get(
                     row["class_id"]

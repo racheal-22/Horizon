@@ -57,27 +57,52 @@ class Command(BaseCommand):
     # FETCH MYSQL DATA IN CHUNKS
     # ==========================================
 
-    def fetch_in_chunks(self, query):
+    def fetch_in_chunks(self, query, retries=3):
 
-        mysql_connection = connections["mysql"]
+        for attempt in range(retries):
 
-        with mysql_connection.cursor() as cursor:
+            try:
 
-            cursor.execute(query)
+                connection = connections["mysql"]
 
-            columns = [col[0] for col in cursor.description]
+                # ensure the connection isn't stale before using it
+                connection.close_if_unusable_or_obsolete()
 
-            while True:
+                with connection.cursor() as cursor:
 
-                rows = cursor.fetchmany(self.BATCH_SIZE)
+                    cursor.execute(query)
 
-                if not rows:
-                    break
+                    columns = [col[0] for col in cursor.description]
 
-                yield [
-                    dict(zip(columns, row))
-                    for row in rows
-                ]
+                    while True:
+
+                        rows = cursor.fetchmany(self.BATCH_SIZE)
+
+                        if not rows:
+                            break
+
+                        yield [
+                            dict(zip(columns, row))
+                            for row in rows
+                        ]
+
+                return  # success, exit generator
+
+            except OperationalError as e:
+
+                if "2013" in str(e) and attempt < retries - 1:
+
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"MySQL connection lost, reconnecting... (attempt {attempt+1})"
+                        )
+                    )
+
+                    connections["mysql"].close()
+                    time.sleep(2)
+                    continue
+
+                raise
 
     # ==========================================
     # SCHOOL + ACADEMIC YEARS

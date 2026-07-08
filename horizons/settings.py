@@ -200,3 +200,5 @@ CACHES = {
         "LOCATION": "career-guidance-cache",
     }
 }
+
+WSGI_APPLICATION = 'horizons.wsgi.application'

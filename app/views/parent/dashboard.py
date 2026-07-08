@@ -21,6 +21,10 @@ from app.models import (
     BookIssue,RemedialSession,
 )
 #from .ai import build_career_context
+from .ai import (
+    build_career_context,
+    generate_career_guidance,
+)
 
 def get_logged_in_user(request):
 
@@ -1149,7 +1153,13 @@ def parent_dashboard(request):
     summary = get_student_year_summary(
         enrollment
     )
+
+    attendance_data = {
+        "days_present": summary.attendance_percentage if summary else 0,
+    }
     
+    behaviour_data = None
+
     subject_wise_marks = get_subject_wise_marks(
         enrollment
     )
@@ -1256,6 +1266,9 @@ def parent_dashboard(request):
         learning_rhythm
     )
 
+
+
+
     five_year_data = get_student_five_year_data(
         child,
         selected_year_id
@@ -1283,6 +1296,29 @@ def parent_dashboard(request):
         indent=4
     ))
     print("===================================\n")
+
+    career_context = build_career_context(
+        child={
+            "first_name": child.first_name,
+            "last_name": child.last_name,
+        },
+        summary={
+            "std": enrollment.division.class_ref.name if enrollment else "",
+            "division": enrollment.division.name if enrollment else "",
+            "overall_score": summary.avg_marks if summary else 0,
+        },
+        academic_summary=academic_summary,
+        subject_growth_journey=subject_growth_journey,
+        learning_rhythm=learning_rhythm,
+        library_data=library_data,
+        project_data=project_data,
+        achievements=achievements,
+        remedial_data=remedial_data,
+        attendance_data=attendance_data,
+        behaviour_data=behaviour_data,
+    )
+
+    career_guidance = generate_career_guidance(career_context)
     
 
     return render(
@@ -1354,6 +1390,8 @@ def parent_dashboard(request):
 
             "project_data":
             project_data,
+
+            "career_guidance": career_guidance.to_dict(),
 
             "project_data_json":
             project_data_json,

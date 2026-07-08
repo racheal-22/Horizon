@@ -56,7 +56,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'horizons.urls'
@@ -145,11 +144,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = '/static/'
+STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
 ]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -181,3 +179,24 @@ SIMPLE_JWT = {
         True,
 }
 
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+GEMINI_MODEL_NAME = "gemini-3.1-flash-lite-preview"
+
+GEMINI_TEMPERATURE = 0.6
+GEMINI_MAX_OUTPUT_TOKENS = 3072
+GEMINI_TOP_P = 0.9
+GEMINI_TOP_K = 40
+
+GEMINI_TIMEOUT_SECONDS = 30
+GEMINI_MAX_RETRIES = 2
+
+CAREER_GUIDANCE_CACHE_TTL_SECONDS = 60 * 60 * 24
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "career-guidance-cache",
+    }
+}

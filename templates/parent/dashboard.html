@@ -192,59 +192,124 @@ Parent Dashboard
         <!-- /LEFT COLUMN -->
 
         <!-- RIGHT SIDEBAR -->
-        <div class="col-12 col-lg-3">
-            <div class="sticky-lg-top" style="top:16px;">
+            <div class="col-12 col-lg-3">
+                <div class="sticky-lg-top" style="top:16px;">
 
-                <div class="glass-card p-3 mb-3">
-                    <h6 class="fw-semibold mb-2">🚀 What Can I Become?</h6>
-                    <p class="small text-muted mb-3">
-                        AI career guidance will be integrated later.
-                    </p>
-                    <input
-                        type="text"
-                        class="form-control form-control-sm mb-2"
-                        placeholder="Doctor, Engineer, Artist..."
-                    >
-                    <button class="btn btn-primary-custom w-100 btn-sm">
-                        Show Career Options
-                    </button>
+                    <div class="glass-card p-3 mb-3">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h6 class="fw-semibold mb-0">🚀 What Can I Become?</h6>
+                            {% if career_guidance.source == "fallback" %}
+                            <span class="badge bg-secondary-subtle text-secondary" style="font-size:9px;"
+                                title="AI guidance is temporarily unavailable — showing subject-based suggestions instead.">
+                                Basic
+                            </span>
+                            {% else %}
+                            <span class="badge bg-primary-subtle text-primary" style="font-size:9px;">AI</span>
+                            {% endif %}
+                        </div>
+
+                        {% if career_guidance.career_recommendations %}
+
+                            <p class="small text-muted mb-3">{{ career_guidance.summary }}</p>
+
+                            <div class="d-flex flex-column gap-2 mb-2">
+                                {% for career in career_guidance.career_recommendations|slice:":3" %}
+                                <div class="p-2 rounded-3" style="background:rgba(13,110,253,.05);">
+                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                        <span class="fw-semibold small">{{ career.title }}</span>
+                                        {% if career.match_score >= 80 %}
+                                        <span class="badge bg-success-subtle text-success" style="font-size:10px;">{{ career.match_score }}% match</span>
+                                        {% elif career.match_score >= 60 %}
+                                        <span class="badge bg-primary-subtle text-primary" style="font-size:10px;">{{ career.match_score }}% match</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary-subtle text-secondary" style="font-size:10px;">{{ career.match_score }}% match</span>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if career.reason %}
+                                    <p class="text-muted mb-1" style="font-size:11px;line-height:1.4;">{{ career.reason }}</p>
+                                    {% endif %}
+
+                                    {% if career.required_skills %}
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for skill in career.required_skills|slice:":3" %}
+                                        <span class="badge bg-light text-dark border" style="font-size:9px;">{{ skill }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            {% if career_guidance.career_recommendations|length > 3 %}
+                            <p class="text-muted mb-0" style="font-size:11px;">
+                                +{{ career_guidance.career_recommendations|length|add:"-3" }} more suggestion{{ career_guidance.career_recommendations|length|add:"-3"|pluralize }} available.
+                            </p>
+                            {% endif %}
+
+                        {% else %}
+                            <p class="small text-muted mb-0">
+                                Career guidance isn't available yet — check back once more academic data has been recorded.
+                            </p>
+                        {% endif %}
+                    </div>
+
+                    <div class="glass-card p-3 mb-3">
+                        <h6 class="fw-semibold mb-2">✨ AI Powered Summary</h6>
+
+                        {% if career_guidance.parent_guidance %}
+                        <p class="text-uppercase fw-bold text-muted mb-2" style="font-size:10px;letter-spacing:.6px;">For Parents</p>
+                        <ul class="list-unstyled mb-3">
+                            {% for tip in career_guidance.parent_guidance|slice:":3" %}
+                            <li class="d-flex align-items-start gap-1 mb-1">
+                                <span class="text-primary flex-shrink-0" style="font-size:11px;">→</span>
+                                <span class="small text-muted" style="font-size:12px;">{{ tip }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+
+                        {% if career_guidance.future_skills %}
+                        <p class="text-uppercase fw-bold text-muted mb-2" style="font-size:10px;letter-spacing:.6px;">Future Skills to Build</p>
+                        <div class="d-flex flex-wrap gap-1 mb-0">
+                            {% for skill in career_guidance.future_skills|slice:":4" %}
+                            <span class="badge bg-info-subtle text-info" style="font-size:10px;" title="{{ skill.why_it_matters }}">{{ skill.name }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        {% if not career_guidance.parent_guidance and not career_guidance.future_skills %}
+                        <p class="text-muted small mb-0">Personalized AI insights will appear here.</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="glass-card p-3">
+                        <h6 class="fw-semibold mb-2">👨‍👩‍👧 Parent Details</h6>
+                        <table class="table table-borderless table-sm mb-0">
+                            <tr>
+                                <td class="text-muted ps-0 small">Father</td>
+                                <td class="text-end pe-0 small fw-semibold">{{ father_name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted ps-0 small">Mother</td>
+                                <td class="text-end pe-0 small fw-semibold">{{ mother_name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted ps-0 small">Guardian</td>
+                                <td class="text-end pe-0 small fw-semibold">{{ guardian }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted ps-0 small">Phone</td>
+                                <td class="text-end pe-0 small fw-semibold">{{ phone }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
                 </div>
-
-                <div class="glass-card p-3 mb-3">
-                    <h6 class="fw-semibold mb-2">✨ AI Powered Summary</h6>
-                    <p class="text-muted small mb-0">
-                        Personalized AI insights will appear here.
-                    </p>
-                </div>
-
-                <div class="glass-card p-3">
-                    <h6 class="fw-semibold mb-2">👨‍👩‍👧 Parent Details</h6>
-                    <table class="table table-borderless table-sm mb-0">
-                        <tr>
-                            <td class="text-muted ps-0 small">Father</td>
-                            <td class="text-end pe-0 small fw-semibold">{{ father_name }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted ps-0 small">Mother</td>
-                            <td class="text-end pe-0 small fw-semibold">{{ mother_name }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted ps-0 small">Guardian</td>
-                            <td class="text-end pe-0 small fw-semibold">{{ guardian }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted ps-0 small">Phone</td>
-                            <td class="text-end pe-0 small fw-semibold">{{ phone }}</td>
-                        </tr>
-                    </table>
-                </div>
-
             </div>
+            <!-- /RIGHT SIDEBAR -->
+
         </div>
-        <!-- /RIGHT SIDEBAR -->
-
-    </div>
-
 </div>
 
 <script>

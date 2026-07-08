@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Avg, Count
 
 from app.models import (
+    School,
     StudentEnrollment,
     Mark,
     StudentAttendance,
@@ -207,7 +208,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                "Behavior analysis generated"
+                f"Behavior analysis generated for {school_obj}"
             )
         )
 
@@ -219,7 +220,26 @@ class Command(BaseCommand):
 
         self.generate_student_summary()
 
-        self.generate_behavior_analysis()
+        # Only run behavior analysis for schools that actually
+        # have enrollments, instead of every School row.
+        school_ids = (
+            StudentEnrollment.objects
+            .values_list("school_id", flat=True)
+            .distinct()
+        )
+
+        schools = School.objects.filter(id__in=school_ids)
+
+        if not schools.exists():
+            self.stdout.write(
+                self.style.WARNING(
+                    "No schools with enrollments found; "
+                    "skipping behavior analysis."
+                )
+            )
+
+        for school_obj in schools:
+            self.generate_behavior_analysis(school_obj)
 
         self.stdout.write(
             self.style.SUCCESS(

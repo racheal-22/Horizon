@@ -59,10 +59,6 @@ ACHIEVEMENT_SKILL_MAP: Dict[str, List[str]] = {
 
 DEFAULT_ACHIEVEMENT_SKILLS: List[str] = ["Initiative", "Commitment"]
 
-
-# ---------------------------------------------------------------------------
-# Skill -> Careers
-# ---------------------------------------------------------------------------
 SKILL_CAREER_MAP: Dict[str, List[str]] = {
     "Analytical Thinking": ["Data Scientist", "Actuary", "Research Analyst"],
     "Creativity": ["Graphic Designer", "Animator", "Content Creator", "Architect"],

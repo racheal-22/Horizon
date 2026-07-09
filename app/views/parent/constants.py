@@ -50,9 +50,6 @@ CACHE_KEY_PREFIX: str = "career_guidance"
 # ---------------------------------------------------------------------------
 # Academic thresholds
 # ---------------------------------------------------------------------------
-# These mirror (and should stay consistent with) the thresholds used
-# elsewhere in the dashboard, so a "strong subject" here means the same
-# thing it means on the Overview tab.
 STRONG_SUBJECT_THRESHOLD: float = 70.0
 WEAK_SUBJECT_THRESHOLD: float = 50.0
 GOOD_ATTENDANCE_THRESHOLD: float = 85.0

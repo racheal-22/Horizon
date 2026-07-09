@@ -531,7 +531,6 @@ def fallback_response(context: CareerContext, reason: str = "") -> AIResponse:
     data — no network call, cannot fail due to an external service.
     Used whenever Gemini is unreachable, unconfigured, or returns an
     unparseable response.
-
     The output shape is identical to a Gemini-sourced AIResponse, so
     templates never need to special-case `source == "fallback"`.
     """

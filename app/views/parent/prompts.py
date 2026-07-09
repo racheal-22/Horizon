@@ -118,8 +118,6 @@ take in the next month to support their academic and personal growth. \
 Avoid generic advice like "encourage them" — be specific to the data \
 given. Respond as JSON: {{"parent_guidance": ["<tip 1>", "<tip 2>", ...]}}
 """
-
-
 # ---------------------------------------------------------------------------
 # Future Skills Prompt — standalone (optional use)
 # ---------------------------------------------------------------------------

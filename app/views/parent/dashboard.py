@@ -1295,7 +1295,7 @@ def parent_dashboard(request):
         five_year_data,
         indent=4
     ))
-    print("===================================\n")
+    print("=======================\n")
 
     career_context = build_career_context(
         child={
